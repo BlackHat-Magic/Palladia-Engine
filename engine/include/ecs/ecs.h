@@ -161,7 +161,7 @@ gpu_renderer* renderer_init (SDL_GPUDevice* device, SDL_Window* window, const Ui
 
 // Ambient Lights
 // rgba -> rgb + intensity
-void add_ambient_light (Entity e, SDL_FColor color);
+void add_ambient_light (Entity e, SDL_FColor color, gpu_renderer* renderer);
 AmbientLightComponent* get_ambient_light (Entity e);
 bool has_ambient_light (Entity e);
 void remove_ambient_light (Entity e);

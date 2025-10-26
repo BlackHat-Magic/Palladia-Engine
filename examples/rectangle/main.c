@@ -170,7 +170,7 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
 
     // ambient light
     Entity ambient_light = create_entity ();
-    add_ambient_light (ambient_light, (SDL_FColor) {1.0f, 1.0f, 1.0f, 0.1f});
+    add_ambient_light (ambient_light, (SDL_FColor) {1.0f, 1.0f, 1.0f, 0.1f}, state->renderer);
 
     // point light
     Entity point_light = create_entity ();

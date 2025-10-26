@@ -271,9 +271,70 @@ void remove_ui (Entity e) {
 };
 
 // Ambient Lights
-void add_ambient_light (Entity e, SDL_FColor color) {
+void add_ambient_light (Entity e, SDL_FColor color, gpu_renderer* renderer) {
     AmbientLightComponent comp = color;
     pool_add (&ambient_light_pool, e, &comp, sizeof (AmbientLightComponent));
+
+    GPUAmbientLight all_lights[ambient_light_pool.count];
+    for (int i = 0; i < ambient_light_pool.count; i++) {
+        Entity light_entity = ambient_light_pool.index_to_entity[i];
+        GPUAmbientLight gpu_light = {0};
+
+        AmbientLightComponent* light = get_ambient_light (light_entity);
+        gpu_light = light ? *light : (SDL_FColor) {1.0f, 1.0f, 1.0f, 1.0f};
+
+        all_lights[i] = gpu_light;
+    }
+
+    Uint32 ssbo_size = ambient_light_pool.count * sizeof (GPUAmbientLight);
+    ssbo_size = ssbo_size > 1024 ? ssbo_size : 1024;
+    if (renderer->ambient_ssbo && renderer->ambient_size < ssbo_size) {
+        SDL_ReleaseGPUBuffer (renderer->device, renderer->ambient_ssbo);
+        renderer->ambient_ssbo = NULL;
+        renderer->ambient_size = 0;
+    }
+
+    if (renderer->ambient_ssbo == NULL) {
+        SDL_GPUBufferCreateInfo ssbo_info = {
+            .size = ssbo_size,
+            .usage = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ,
+        };
+        renderer->ambient_ssbo = SDL_CreateGPUBuffer (renderer->device, &ssbo_info);
+        if (renderer->ambient_ssbo == NULL) {
+            return;
+        }
+    }
+
+    SDL_GPUTransferBufferCreateInfo tbuf_info = {
+        .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+        .size = ssbo_size,
+    };
+    SDL_GPUTransferBuffer* tbuf = SDL_CreateGPUTransferBuffer (renderer->device, &tbuf_info);
+    void* map = SDL_MapGPUTransferBuffer (renderer->device, tbuf, false);
+    if (map == NULL) {
+        SDL_ReleaseGPUTransferBuffer (renderer->device, tbuf);
+        return;
+    }
+    memcpy (map, all_lights, sizeof (all_lights));
+    GPUAmbientLight* mapped_light = (GPUAmbientLight*) map;
+    SDL_UnmapGPUTransferBuffer (renderer->device, tbuf);
+
+    // upload data
+    SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer(renderer->device);
+    SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
+    SDL_GPUTransferBufferLocation tbuf_loc = {
+        .transfer_buffer = tbuf,
+        .offset = 0,
+    };
+    SDL_GPUBufferRegion tbuf_region = {
+        .buffer = renderer->ambient_ssbo,
+        .offset = 0,
+        .size = sizeof (all_lights),
+    };
+    SDL_UploadToGPUBuffer (pass, &tbuf_loc, &tbuf_region, false);
+    SDL_EndGPUCopyPass (pass);
+    SDL_SubmitGPUCommandBuffer (cmd);
+    SDL_ReleaseGPUTransferBuffer(renderer->device, tbuf);
 }
 AmbientLightComponent* get_ambient_light (Entity e) {
     return (AmbientLightComponent*) pool_get (

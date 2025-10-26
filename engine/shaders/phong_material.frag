@@ -40,7 +40,7 @@ void main() {
     vec3 view_xyz = ubo.cam_pos.xyz;
     vec3 norm = normalize(Normal);
 
-    vec3 ambient_sum = vec3(0.1, 0.1, 0.1);
+    vec3 ambient_sum = vec3(0.0);
 
     // ambient lights
     for (int i = 0; i < ubo.ambient_count; i++) {
