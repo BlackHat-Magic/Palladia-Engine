@@ -8,7 +8,22 @@
 
 #include <microui.h>
 
+#include <geometry/circle.h>
+#include <geometry/plane.h>
+#include <geometry/ring.h>
+
+#include <geometry/tetrahedron.h>
+#include <geometry/box.h>
+#include <geometry/octahedron.h>
+#include <geometry/dodecahedron.h>
+#include <geometry/icosahedron.h>
+
+#include <geometry/capsule.h>
+#include <geometry/cone.h>
+#include <geometry/cylinder.h>
+#include <geometry/sphere.h>
 #include <geometry/torus.h>
+
 #include <material/phong_material.h>
 #include <ui/ui.h>
 
@@ -18,12 +33,27 @@
 #define MOUSE_SENSE 1.0f / 100.0f
 #define MOVEMENT_SPEED 3.0f
 
+typedef enum {
+    GEO_BOX,
+    GEO_CAPSULE,
+    GEO_CIRCLE,
+    GEO_CONE,
+    GEO_CYLINDER,
+    GEO_DODECAHEDRON,
+    GEO_ICOSAHEDRON,
+    GEO_OCTAHEDRON,
+    GEO_PLANE,
+    GEO_RING,
+    GEO_SPHERE,
+    GEO_TETRAHEDRON,
+    GEO_TORUS,
+} geometry;
 
 typedef struct {
     bool quit;
     gpu_renderer* renderer;
     Entity player;
-    Entity torus;
+    Entity entity;
     Uint64 last_time;
     Uint64 prerender;
     Uint64 preui;
@@ -47,18 +77,19 @@ SDL_AppResult SDL_AppEvent (void* appstate, SDL_Event* event) {
         break;
     case SDL_EVENT_KEY_DOWN:
         if (event->key.key == SDLK_ESCAPE) {
-            state->relative_mouse = !state->relative_mouse;
-            SDL_SetWindowRelativeMouseMode (state->renderer->window, state->relative_mouse);
+            if (!state->relative_mouse) return SDL_APP_SUCCESS;
+            state->relative_mouse = false;
+            SDL_SetWindowRelativeMouseMode (state->renderer->window, false);
         }
         break;
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
         if (event->button.button == SDL_BUTTON_LEFT) {
-            state->relative_mouse = !state->relative_mouse;
-            bool success = SDL_SetWindowRelativeMouseMode (state->renderer->window, state->relative_mouse);
+            state->relative_mouse = true;
+            SDL_SetWindowRelativeMouseMode (state->renderer->window, true);
         }
     }
 
-    if (state->relative_mouse) fps_controller_event_system(event);
+    if (true) fps_controller_event_system(event);
 
     return SDL_APP_CONTINUE;
 }
@@ -141,13 +172,55 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     // ui->context.style->title_height = 30;
     // ui->context.style->padding = 6;
 
-    // torus
-    state->torus = create_entity ();
+    // torus entity
+    state->entity = create_entity ();
+
+    // circle mesh
+    MeshComponent circle_mesh = create_circle_mesh (0.5f, 16, state->renderer->device);
+    if (circle_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
+    MeshComponent plane_mesh = create_plane_mesh (1.0f, 1.0f, 1, 1, state->renderer->device);
+    if (plane_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
+    MeshComponent ring_mesh = create_ring_mesh (
+        0.25f, 0.5f, 16, 16, 0.0f, 2.0 * (float) M_PI, state->renderer->device
+    );
+    if (ring_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
+
+    // platonic solids
+    MeshComponent tetrahedron_mesh = create_tetrahedron_mesh (0.5f, state->renderer->device);
+    if (tetrahedron_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
+    MeshComponent box_mesh = create_box_mesh (1.0f, 1.0f, 1.0f, state->renderer->device);
+    if (box_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
+    MeshComponent octahedron_mesh = create_octahedron_mesh (0.5f, state->renderer->device);
+    if (octahedron_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
+    MeshComponent dodecahedron_mesh = create_dodecahedron_mesh (0.5f, state->renderer->device);
+    if (dodecahedron_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
+    MeshComponent icosahedron_mesh = create_icosahedron_mesh (0.5f, state->renderer->device);
+    if (icosahedron_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
+
+    // round bois
+    MeshComponent capsule_mesh = create_capsule_mesh (0.5f, 1.0f, 8, 16, state->renderer->device);
+    if (capsule_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
+    MeshComponent cone_mesh = create_cone_mesh (
+        0.5f, 1.0f, 16, 1, false, 0.0f, 2.0f * (float) M_PI, state->renderer->device
+    );
+    if (cone_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
+    MeshComponent cylinder_mesh = create_cylinder_mesh (
+        0.5f, 0.5f, 1.0f, 16, 1, false, 0.0f, 2.0f * (float) M_PI, state->renderer->device
+    );
+    if (cylinder_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
+    MeshComponent sphere_mesh = create_sphere_mesh (
+        0.5f, 32, 16, 0.0f, (float) M_PI * 2.0f, 0.0f, (float) M_PI,
+        state->renderer->device
+    );
+    if (sphere_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
     MeshComponent torus_mesh = create_torus_mesh (
         0.5f, 0.2f, 16, 32, (float) M_PI * 2.0f, state->renderer->device
     );
     if (torus_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
-    add_mesh (state->torus, torus_mesh);
+
+    // add mesh
+    add_mesh (state->entity, torus_mesh);
+
     // torus material
     SDL_GPUSamplerCreateInfo torus_sampler_info = {
         .min_filter = SDL_GPU_FILTER_LINEAR,
@@ -161,10 +234,11 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     };
     SDL_GPUSampler* torus_sampler = SDL_CreateGPUSampler (state->renderer->device, &torus_sampler_info);
     MaterialComponent torus_material = create_phong_material (state->renderer, (SDL_FColor) {1.0f, 1.0f, 1.0f, 1.0f}, (SDL_FColor) {1.0f, 1.0f, 1.0f, 1.0f}, SDL_GPU_CULLMODE_BACK, state->white_texture, torus_sampler);
-    add_material (state->torus, torus_material);
+    add_material (state->entity, torus_material);
+
     // torus transform
     add_transform (
-        state->torus, (vec3) {0.0f, 0.0f, 0.0f}, (vec3) {0.0f, 0.0f, 0.0f},
+        state->entity, (vec3) {0.0f, 0.0f, 0.0f}, (vec3) {0.0f, 0.0f, 0.0f},
         (vec3) {1.0f, 1.0f, 1.0f}
     );
 
@@ -230,12 +304,12 @@ SDL_AppResult SDL_AppIterate (void* appstate) {
     sprintf (buffer, "Framerate: %.3f", state->frame_rate);
     draw_text (ui, state->renderer->device, buffer, 5.0f, 41.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 
-    TransformComponent transform = *get_transform (state->torus);
+    TransformComponent transform = *get_transform (state->entity);
     vec3 rotation = euler_from_quat (transform.rotation);
     rotation.x += 0.005f;
     rotation.z += 0.01f;
     transform.rotation = quat_from_euler (rotation);
-    add_transform (state->torus, transform.position, rotation, transform.scale);
+    add_transform (state->entity, transform.position, rotation, transform.scale);
 
     // camera forward vector
     fps_controller_update_system (dt);
