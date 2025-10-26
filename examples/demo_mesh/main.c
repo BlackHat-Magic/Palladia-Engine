@@ -34,18 +34,20 @@
 #define MOVEMENT_SPEED 3.0f
 
 typedef enum {
-    GEO_BOX,
-    GEO_CAPSULE,
-    GEO_CIRCLE,
-    GEO_CONE,
-    GEO_CYLINDER,
-    GEO_DODECAHEDRON,
-    GEO_ICOSAHEDRON,
-    GEO_OCTAHEDRON,
+    GEO_CIRCLE = 0,
     GEO_PLANE,
     GEO_RING,
-    GEO_SPHERE,
+
     GEO_TETRAHEDRON,
+    GEO_BOX,
+    GEO_OCTAHEDRON,
+    GEO_DODECAHEDRON,
+    GEO_ICOSAHEDRON,
+
+    GEO_CAPSULE,
+    GEO_CONE,
+    GEO_CYLINDER,
+    GEO_SPHERE,
     GEO_TORUS,
 } geometry;
 
@@ -54,6 +56,8 @@ typedef struct {
     gpu_renderer* renderer;
     Entity player;
     Entity entity;
+    MeshComponent meshes[13];
+    geometry current_mesh;
     Uint64 last_time;
     Uint64 prerender;
     Uint64 preui;
@@ -80,6 +84,18 @@ SDL_AppResult SDL_AppEvent (void* appstate, SDL_Event* event) {
             if (!state->relative_mouse) return SDL_APP_SUCCESS;
             state->relative_mouse = false;
             SDL_SetWindowRelativeMouseMode (state->renderer->window, false);
+        }
+        if (event->key.key == SDLK_UP) {
+            if (state->current_mesh < GEO_TORUS) {
+                MeshComponent* current_mesh = get_mesh (state->entity);
+                *current_mesh = state->meshes[++state->current_mesh];
+            }
+        }
+        if (event->key.key == SDLK_DOWN) {
+            if (state->current_mesh > GEO_CIRCLE) {
+                MeshComponent* current_mesh = get_mesh (state->entity);
+                *current_mesh = state->meshes[--state->current_mesh];
+            }
         }
         break;
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
@@ -176,50 +192,50 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     state->entity = create_entity ();
 
     // circle mesh
-    MeshComponent circle_mesh = create_circle_mesh (0.5f, 16, state->renderer->device);
-    if (circle_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
-    MeshComponent plane_mesh = create_plane_mesh (1.0f, 1.0f, 1, 1, state->renderer->device);
-    if (plane_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
-    MeshComponent ring_mesh = create_ring_mesh (
+    state->meshes[GEO_CIRCLE] = create_circle_mesh (0.5f, 16, state->renderer->device);
+    if (state->meshes[GEO_CIRCLE].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    state->meshes[GEO_PLANE] = create_plane_mesh (1.0f, 1.0f, 1, 1, state->renderer->device);
+    if (state->meshes[GEO_PLANE].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    state->meshes[GEO_RING] = create_ring_mesh (
         0.25f, 0.5f, 16, 16, 0.0f, 2.0 * (float) M_PI, state->renderer->device
     );
-    if (ring_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
+    if (state->meshes[GEO_RING].vertex_buffer == NULL) return SDL_APP_FAILURE;
 
     // platonic solids
-    MeshComponent tetrahedron_mesh = create_tetrahedron_mesh (0.5f, state->renderer->device);
-    if (tetrahedron_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
-    MeshComponent box_mesh = create_box_mesh (1.0f, 1.0f, 1.0f, state->renderer->device);
-    if (box_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
-    MeshComponent octahedron_mesh = create_octahedron_mesh (0.5f, state->renderer->device);
-    if (octahedron_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
-    MeshComponent dodecahedron_mesh = create_dodecahedron_mesh (0.5f, state->renderer->device);
-    if (dodecahedron_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
-    MeshComponent icosahedron_mesh = create_icosahedron_mesh (0.5f, state->renderer->device);
-    if (icosahedron_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
+    state->meshes[GEO_TETRAHEDRON] = create_tetrahedron_mesh (0.5f, state->renderer->device);
+    if (state->meshes[GEO_TETRAHEDRON].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    state->meshes[GEO_BOX] = create_box_mesh (1.0f, 1.0f, 1.0f, state->renderer->device);
+    if (state->meshes[GEO_BOX].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    state->meshes[GEO_OCTAHEDRON] = create_octahedron_mesh (0.5f, state->renderer->device);
+    if (state->meshes[GEO_OCTAHEDRON].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    state->meshes[GEO_DODECAHEDRON] = create_dodecahedron_mesh (0.5f, state->renderer->device);
+    if (state->meshes[GEO_DODECAHEDRON].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    state->meshes[GEO_ICOSAHEDRON] = create_icosahedron_mesh (0.5f, state->renderer->device);
+    if (state->meshes[GEO_ICOSAHEDRON].vertex_buffer == NULL) return SDL_APP_FAILURE;
 
     // round bois
-    MeshComponent capsule_mesh = create_capsule_mesh (0.5f, 1.0f, 8, 16, state->renderer->device);
-    if (capsule_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
-    MeshComponent cone_mesh = create_cone_mesh (
+    state->meshes[GEO_CAPSULE] = create_capsule_mesh (0.5f, 1.0f, 8, 16, state->renderer->device);
+    if (state->meshes[GEO_CAPSULE].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    state->meshes[GEO_CONE] = create_cone_mesh (
         0.5f, 1.0f, 16, 1, false, 0.0f, 2.0f * (float) M_PI, state->renderer->device
     );
-    if (cone_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
-    MeshComponent cylinder_mesh = create_cylinder_mesh (
+    if (state->meshes[GEO_CONE].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    state->meshes[GEO_CYLINDER] = create_cylinder_mesh (
         0.5f, 0.5f, 1.0f, 16, 1, false, 0.0f, 2.0f * (float) M_PI, state->renderer->device
     );
-    if (cylinder_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
-    MeshComponent sphere_mesh = create_sphere_mesh (
+    if (state->meshes[GEO_CYLINDER].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    state->meshes[GEO_SPHERE] = create_sphere_mesh (
         0.5f, 32, 16, 0.0f, (float) M_PI * 2.0f, 0.0f, (float) M_PI,
         state->renderer->device
     );
-    if (sphere_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
-    MeshComponent torus_mesh = create_torus_mesh (
+    if (state->meshes[GEO_SPHERE].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    state->meshes[GEO_TORUS] = create_torus_mesh (
         0.5f, 0.2f, 16, 32, (float) M_PI * 2.0f, state->renderer->device
     );
-    if (torus_mesh.vertex_buffer == NULL) return SDL_APP_FAILURE;
+    if (state->meshes[GEO_TORUS].vertex_buffer == NULL) return SDL_APP_FAILURE;
 
     // add mesh
-    add_mesh (state->entity, torus_mesh);
+    add_mesh (state->entity, state->meshes[0]);
 
     // torus material
     SDL_GPUSamplerCreateInfo torus_sampler_info = {
