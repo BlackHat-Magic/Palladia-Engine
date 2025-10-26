@@ -321,16 +321,6 @@ void add_point_light (Entity e, SDL_FColor color, gpu_renderer* renderer) {
         gpu_light.position = position;
         
         all_lights[i] = gpu_light;
-        SDL_Log (
-            "Light: x=%.1f, y=%.1f, z=%.1f, r=%.1f, g=%.1f, b=%.1f, a=%.1f",
-            position.x,
-            position.y,
-            position.z,
-            gpu_light.color.r,
-            gpu_light.color.g,
-            gpu_light.color.b,
-            gpu_light.color.a
-        );
     }
 
     // release existing ssbo if it's too small
@@ -368,16 +358,6 @@ void add_point_light (Entity e, SDL_FColor color, gpu_renderer* renderer) {
     }
     memcpy (map, all_lights, sizeof (all_lights));
     GPUPointLight* mapped_light = (GPUPointLight*) map;
-    SDL_Log (
-        "Light: x=%.1f, y=%.1f, z=%.1f, r=%.1f, g=%.1f, b=%.1f, a=%.1f",
-        mapped_light->position.x,
-        mapped_light->position.y,
-        mapped_light->position.z,
-        mapped_light->color.r,
-        mapped_light->color.g,
-        mapped_light->color.b,
-        mapped_light->color.a
-    );
     SDL_UnmapGPUTransferBuffer (renderer->device, tbuf);
 
     // upload data
@@ -710,7 +690,7 @@ SDL_AppResult render_system (
         };
         SDL_BindGPUFragmentSamplers (pass, 0, &tex_bind, 1);
         SDL_GPUBuffer* buffers[] = {renderer->ambient_ssbo, renderer->point_ssbo};
-        SDL_BindGPUFragmentStorageBuffers (pass, 1, buffers, 2);
+        SDL_BindGPUFragmentStorageBuffers (pass, 0, buffers, 2);
 
         if (mesh->index_buffer) {
             SDL_GPUBufferBinding ibo_binding = {

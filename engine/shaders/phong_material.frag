@@ -13,9 +13,8 @@ struct PointLight {
     vec4 color;     // rgb + intensity
 };
 
+// Set 2: samplers, SSBOs
 layout (set = 2, binding = 0) uniform sampler2D texture1;
-
-// SSBOs
 layout (std430, set = 2, binding = 1) buffer AmbientBuffer {
     AmbientLight ambients[];
 };
@@ -46,9 +45,6 @@ void main() {
     // ambient lights
     for (int i = 0; i < ubo.ambient_count; i++) {
         float intensity = ambients[i].color.a;
-        if (intensity <= 0.0) {
-            continue;
-        }
         vec3 rgb = ambients[i].color.rgb;
 
         ambient_sum += intensity * rgb * objectColor;
@@ -57,29 +53,25 @@ void main() {
     // point lights
     vec3 diffuse_sum = vec3(0.0);
     vec3 specular_sum = vec3(0.0);
-    // for (int i = 0; i < ubo.point_count; i++) {
-    //     float intensity = points[i].color.a;
-    //     if (intensity <= 0.0) {
-    //         continue;
-    //     }
-    //     vec3 point_xyz = points[i].position.xyz;
-    //     vec3 light_dir = normalize(point_xyz - FragPos);
-    //     vec3 point_rgb = points[i].color.rgb;
+    for (int i = 0; i < ubo.point_count; i++) {
+        float intensity = points[i].color.a;
+        vec3 point_xyz = points[i].position.xyz;
+        vec3 light_dir = normalize(point_xyz - FragPos);
+        float light_dist = length(point_xyz - FragPos); // TODO: distance attenuation
+        vec3 point_rgb = points[i].color.rgb;
 
-    //     // diffuse
-    //     float diff = max(dot(norm, light_dir), 0.0);
-    //     diffuse_sum += intensity * point_rgb * diff * objectColor;
+        // diffuse
+        float diff = max(dot(norm, light_dir), 0.0);
+        diffuse_sum += intensity * point_rgb * diff * objectColor;
 
-    //     // specular
-    //     vec3 view_dir = normalize(view_xyz - FragPos);
-    //     vec3 reflection_dir = reflect(-light_dir, norm);
-    //     float spec = pow(max(dot(view_dir, reflection_dir), 0.0), 256);
-    //     specular_sum += 0.5 * spec * point_rgb;
-    // }
-    diffuse_sum = points[0].color.rgb;
+        // specular
+        vec3 view_dir = normalize(view_xyz - FragPos);
+        vec3 reflection_dir = reflect(-light_dir, norm);
+        float spec = pow(max(dot(view_dir, reflection_dir), 0.0), 256);
+        specular_sum += 0.5 * spec * point_rgb;
+    }
 
     // Combine
     vec3 result = ambient_sum + diffuse_sum + specular_sum;
     outColor = vec4(result, texColor.a);
-    // outColor = vec4(1.0, 1.0, 1.0, 1.0);
 }

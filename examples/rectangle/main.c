@@ -51,6 +51,11 @@ SDL_AppResult SDL_AppEvent (void* appstate, SDL_Event* event) {
             SDL_SetWindowRelativeMouseMode (state->renderer->window, state->relative_mouse);
         }
         break;
+    case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        if (event->button.button == SDL_BUTTON_LEFT) {
+            state->relative_mouse = !state->relative_mouse;
+            bool success = SDL_SetWindowRelativeMouseMode (state->renderer->window, state->relative_mouse);
+        }
     }
 
     if (state->relative_mouse) fps_controller_event_system(event);
