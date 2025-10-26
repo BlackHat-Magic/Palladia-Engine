@@ -58,15 +58,27 @@ typedef struct {
     Entity entity;
     MeshComponent meshes[13];
     geometry current_mesh;
+    Uint8 test;
     Uint64 last_time;
     Uint64 prerender;
     Uint64 preui;
     Uint64 postrender;
     float frame_rate;
     Uint64 frame_count;
-    bool relative_mouse;
+    bool debug;
+    bool settings;
     SDL_GPUTexture* white_texture;
 } AppState;
+
+static int uint8_slider (mu_Context* ctx, Uint8* value, int low, int high) {
+    static float tmp;
+    mu_push_id (ctx, &value, sizeof (value));
+    tmp = *value;
+    int res = mu_slider_ex (ctx, &tmp, low, high, 0, "%.0f", MU_OPT_ALIGNCENTER);
+    *value = tmp;
+    mu_pop_id (ctx);
+    return res;
+}
 
 SDL_AppResult SDL_AppEvent (void* appstate, SDL_Event* event) {
     AppState* state = (AppState*) appstate;
@@ -81,10 +93,12 @@ SDL_AppResult SDL_AppEvent (void* appstate, SDL_Event* event) {
         break;
     case SDL_EVENT_KEY_DOWN:
         if (event->key.key == SDLK_ESCAPE) {
-            if (!state->relative_mouse) return SDL_APP_SUCCESS;
-            state->relative_mouse = false;
-            SDL_SetWindowRelativeMouseMode (state->renderer->window, false);
+            state->settings = !state->settings;
+            SDL_SetWindowRelativeMouseMode (state->renderer->window, !state->settings);
+            return SDL_APP_CONTINUE;
+            // break;
         }
+        if (event->key.key == SDLK_F3) state->debug = !state->debug;
         if (event->key.key == SDLK_UP) {
             if (state->current_mesh < GEO_TORUS) {
                 MeshComponent* current_mesh = get_mesh (state->entity);
@@ -98,14 +112,14 @@ SDL_AppResult SDL_AppEvent (void* appstate, SDL_Event* event) {
             }
         }
         break;
-    case SDL_EVENT_MOUSE_BUTTON_DOWN:
-        if (event->button.button == SDL_BUTTON_LEFT) {
-            state->relative_mouse = true;
-            SDL_SetWindowRelativeMouseMode (state->renderer->window, true);
-        }
     }
 
-    if (true) fps_controller_event_system(event);
+    if (state->settings) {
+        UIComponent* ui = get_ui (state->player);
+        ui_handle_event (event, ui);
+    } else {
+        fps_controller_event_system (event);
+    }
 
     return SDL_APP_CONTINUE;
 }
@@ -175,8 +189,8 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     );
     add_camera (state->player, STARTING_FOV, 0.01f, 1000.0f);
     add_fps_controller (state->player, MOUSE_SENSE, MOVEMENT_SPEED);
-    state->relative_mouse = true;
-    SDL_SetWindowRelativeMouseMode (state->renderer->window, state->relative_mouse);
+    state->settings = false;
+    SDL_SetWindowRelativeMouseMode (state->renderer->window, !state->settings);
     UIComponent* ui = create_ui_component (
         state->renderer, 255, 255, "./assets/NotoSans-Regular.ttf", 12.0f
     );
@@ -299,26 +313,32 @@ SDL_AppResult SDL_AppIterate (void* appstate) {
     // draw ui
     UIComponent* ui = get_ui (state->player);
     mu_begin (&ui->context);
-    if (mu_begin_window (&ui->context, "Test Window", mu_rect (250, 250, 300, 240))) {
-        mu_layout_row (&ui->context, 1, (int[]){80}, 0);
-        mu_label (&ui->context, "Test label");
-        mu_end_window (&ui->context);
+    if (state->settings) {
+        if (mu_begin_window (&ui->context, "Test Window", mu_rect (250, 250, 300, 240))) {
+            mu_layout_row (&ui->context, 1, (int[]){80}, 0);
+            mu_label (&ui->context, "Test label");
+            uint8_slider (&ui->context, &state->test, 0, 255);
+            mu_end_window (&ui->context);
+        }
     }
     mu_end (&ui->context);
-    // ui_render (state, ui);
 
-    char buffer[64];
-    sprintf (buffer, "Mesh render: %.1f", mesh_time_ms);
-    draw_text (ui, state->renderer->device, buffer, 5.0f, 5.0f, 1.0f, 1.0f, 1.0f, 1.0f);
-    sprintf (buffer, "UI render: %.1f", ui_time_ms);
-    draw_text (ui, state->renderer->device, buffer, 5.0f, 17.0f, 1.0f, 1.0f, 1.0f, 1.0f);
-    sprintf (buffer, "Total render: %.1f", render_time_ms);
-    draw_text (ui, state->renderer->device, buffer, 5.0f, 29.0f, 1.0f, 1.0f, 1.0f, 1.0f);
-    if (state->frame_count % 60 == 0) {
-        state->frame_rate = 1000.0f / render_time_ms;
+    if (state->debug) {
+        char buffer[64];
+        sprintf (buffer, "Mesh render: %.1f", mesh_time_ms);
+        draw_text (ui, state->renderer->device, buffer, 5.0f, 5.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+        sprintf (buffer, "UI render: %.1f", ui_time_ms);
+        draw_text (ui, state->renderer->device, buffer, 5.0f, 17.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+        sprintf (buffer, "Total render: %.1f", render_time_ms);
+        draw_text (ui, state->renderer->device, buffer, 5.0f, 29.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+        if (state->frame_count % 60 == 0) {
+            state->frame_rate = 1000.0f / render_time_ms;
+        }
+        sprintf (buffer, "Framerate: %.3f", state->frame_rate);
+        draw_text (ui, state->renderer->device, buffer, 5.0f, 41.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+    } else {
+        draw_text (ui, state->renderer->device, "f3: Debug Menu", 5.0f, 5.0f, 1.0f, 1.0f, 1.0f, 1.0f);
     }
-    sprintf (buffer, "Framerate: %.3f", state->frame_rate);
-    draw_text (ui, state->renderer->device, buffer, 5.0f, 41.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 
     TransformComponent transform = *get_transform (state->entity);
     vec3 rotation = euler_from_quat (transform.rotation);
@@ -328,7 +348,7 @@ SDL_AppResult SDL_AppIterate (void* appstate) {
     add_transform (state->entity, transform.position, rotation, transform.scale);
 
     // camera forward vector
-    fps_controller_update_system (dt);
+    if (!state->settings) fps_controller_update_system (dt);
 
     render_system (state->renderer, cam, &state->prerender, &state->preui, &state->postrender);
 
