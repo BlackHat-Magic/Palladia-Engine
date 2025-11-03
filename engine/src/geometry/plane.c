@@ -16,10 +16,10 @@ PAL_MeshComponent* PAL_CreatePlaneMesh (const PAL_PlaneMeshCreateInfo* info) {
     float* vertices = (float*) malloc (
         num_vertices * 8 * sizeof (float)
     ); // pos.x,y,z + normal.x,y,z + uv.u,v
-    if (!vertices) return NULL;
+    if (vertices == NULL) return NULL;
 
     Uint32* indices = (Uint32*) malloc (num_indices * sizeof (Uint32));
-    if (!indices) {
+    if (indices == NULL) {
         free (vertices);
         return NULL;
     }

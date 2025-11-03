@@ -224,6 +224,7 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     };
     state->meshes[GEO_PLANE] = PAL_CreatePlaneMesh (&plane_info);
     if (state->meshes[GEO_PLANE] == NULL) return SDL_APP_FAILURE;
+    SDL_Log ("plane");
 
     // ring
     PAL_RingMeshCreateInfo ring_info = {
@@ -237,6 +238,7 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     };
     state->meshes[GEO_RING] = PAL_CreateRingMesh (&ring_info);
     if (state->meshes[GEO_RING] == NULL) return SDL_APP_FAILURE;
+    SDL_Log ("ring");
 
     // tetrahedron
     PAL_TetrahedronMeshCreateInfo tetrahedron_info = {
@@ -245,6 +247,7 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     };
     state->meshes[GEO_TETRAHEDRON] = PAL_CreateTetrahedronMesh (&tetrahedron_info);
     if (state->meshes[GEO_TETRAHEDRON] == NULL) return SDL_APP_FAILURE;
+    SDL_Log ("tetrahedron");
 
     // box mesh
     PAL_BoxMeshCreateInfo box_info = {
@@ -255,6 +258,7 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     };
     state->meshes[GEO_BOX] = PAL_CreateBoxMesh (&box_info);
     if (state->meshes[GEO_BOX] == NULL) return SDL_APP_FAILURE;
+    SDL_Log ("box");
 
     // octahedron
     PAL_OctahedronMeshCreateInfo octahedron_info = {
@@ -263,6 +267,7 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     };
     state->meshes[GEO_OCTAHEDRON] = PAL_CreateOctahedronMesh (&octahedron_info);
     if (state->meshes[GEO_OCTAHEDRON] == NULL) return SDL_APP_FAILURE;
+    SDL_Log ("octahedron");
 
     // dodecahedron
     PAL_DodecahedronMeshCreateInfo dodecahedron_info = {
@@ -271,6 +276,7 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     };
     state->meshes[GEO_DODECAHEDRON] = PAL_CreateDodecahedronMesh (&dodecahedron_info);
     if (state->meshes[GEO_DODECAHEDRON] == NULL) return SDL_APP_FAILURE;
+    SDL_Log ("dodecahedron");
 
     // icosahedron
     PAL_IcosahedronMeshCreateInfo icosahedron_info = {
@@ -279,17 +285,20 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     };
     state->meshes[GEO_ICOSAHEDRON] = PAL_CreateIcosahedronMesh (&icosahedron_info);
     if (state->meshes[GEO_ICOSAHEDRON] == NULL) return SDL_APP_FAILURE;
+    SDL_Log ("icosahedron");
 
     // capsule
-    PAL_CapsuleMeshCreateInfo capsule_info = {
-        .radius = 0.5f,
-        .height = 1.0f,
-        .cap_segments = 8,
-        .radial_segments = 16,
-        .device = state->renderer->device,
-    };
-    state->meshes[GEO_CAPSULE] = PAL_CreateCapsuleMesh (&capsule_info);
-    if (state->meshes[GEO_CAPSULE] == NULL) return SDL_APP_FAILURE;
+    // PAL_CapsuleMeshCreateInfo capsule_info = {
+    //     .radius = 0.5f,
+    //     .height = 1.0f,
+    //     .cap_segments = 8,
+    //     .radial_segments = 16,
+    //     .device = state->renderer->device,
+    // };
+    // state->meshes[GEO_CAPSULE] = PAL_CreateCapsuleMesh (&capsule_info);
+    // if (state->meshes[GEO_CAPSULE] == NULL) return SDL_APP_FAILURE;
+    // SDL_Log ("capsule");
+    state->meshes[GEO_CAPSULE] = state->meshes[GEO_ICOSAHEDRON];
 
     // cone
     PAL_ConeMeshCreateInfo cone_info = {
@@ -304,6 +313,7 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     };
     state->meshes[GEO_CONE] = PAL_CreateConeMesh (&cone_info);
     if (state->meshes[GEO_CONE] == NULL) return SDL_APP_FAILURE;
+    SDL_Log ("cone");
 
     // cylinder
     PAL_CylinderMeshCreateInfo cylinder_info = {
@@ -319,6 +329,7 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     };
     state->meshes[GEO_CYLINDER] = PAL_CreateCylinderMesh (&cylinder_info);
     if (state->meshes[GEO_CYLINDER] == NULL) return SDL_APP_FAILURE;
+    SDL_Log ("cylinder");
 
     // sphere
     PAL_SphereMeshCreateInfo sphere_info = {
@@ -333,6 +344,7 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     };
     state->meshes[GEO_SPHERE] = PAL_CreateSphereMesh (&sphere_info);
     if (state->meshes[GEO_SPHERE] == NULL) return SDL_APP_FAILURE;
+    SDL_Log ("sphere");
 
     // torus
     PAL_TorusMeshCreateInfo torus_info = {
@@ -345,6 +357,7 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     };
     state->meshes[GEO_TORUS] = PAL_CreateTorusMesh (&torus_info);
     if (state->meshes[GEO_TORUS] == NULL) return SDL_APP_FAILURE;
+    SDL_Log ("torus");
 
     // add mesh
     PAL_AddMeshComponent (state->entity, state->meshes[0]);
