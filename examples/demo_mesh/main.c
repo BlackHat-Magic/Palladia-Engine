@@ -320,11 +320,20 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
     state->meshes[GEO_CYLINDER] = PAL_CreateCylinderMesh (&cylinder_info);
     if (state->meshes[GEO_CYLINDER] == NULL) return SDL_APP_FAILURE;
 
-    state->meshes[GEO_SPHERE] = create_sphere_mesh (
-        0.5f, 32, 16, 0.0f, (float) M_PI * 2.0f, 0.0f, (float) M_PI,
-        state->renderer->device
-    );
-    if (state->meshes[GEO_SPHERE].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    // sphere
+    PAL_SphereMeshCreateInfo sphere_info = {
+        .radius = 0.5f,
+        .width_segments = 32,
+        .height_segments = 16,
+        .phi_start = 0.0f,
+        .phi_length = (float) M_PI * 2.0f,
+        .theta_start = 0.0f,
+        .theta_length = (float) M_PI,
+        .device = state->renderer->device,
+    };
+    state->meshes[GEO_SPHERE] = PAL_CreateSphereMesh (&sphere_info);
+    if (state->meshes[GEO_SPHERE] == NULL) return SDL_APP_FAILURE;
+
     state->meshes[GEO_TORUS] = create_torus_mesh (
         0.5f, 0.2f, 16, 32, (float) M_PI * 2.0f, state->renderer->device
     );
