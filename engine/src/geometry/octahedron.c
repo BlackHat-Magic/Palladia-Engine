@@ -60,10 +60,10 @@ PAL_MeshComponent create_octahedron_mesh (float radius, SDL_GPUDevice* device) {
 
     PAL_MeshComponent out_mesh =
         (PAL_MeshComponent) {.vertex_buffer = vbo,
-                         .num_vertices = (Uint32) num_vertices,
-                         .index_buffer = ibo,
-                         .num_indices = sizeof (indices) / sizeof (Uint32),
-                         .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
+                             .num_vertices = (Uint32) num_vertices,
+                             .index_buffer = ibo,
+                             .num_indices = sizeof (indices) / sizeof (Uint32),
+                             .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
 
     return out_mesh;
 }

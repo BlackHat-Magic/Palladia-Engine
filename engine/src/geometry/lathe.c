@@ -16,10 +16,11 @@ PAL_MeshComponent PAL_CreateLatheMesh (static PAL_LatheMeshCreateInfo* info) {
     float* vertices = (float*) malloc (
         num_vertices * 8 * sizeof (float)
     ); // pos.x,y,z + normal.x,y,z + uv.u,v
-    if (vertices == NULL) return NULL
+    if (vertices == NULL)
+        return NULL
 
-    // Generate vertices
-    Uint32 vertex_idx = 0;
+                   // Generate vertices
+                   Uint32 vertex_idx = 0;
     for (Uint32 i = 0; i < num_points; i++) {
         float u = (float) i / (float) (num_points - 1); // Axial UV
 
@@ -80,13 +81,12 @@ PAL_MeshComponent PAL_CreateLatheMesh (static PAL_LatheMeshCreateInfo* info) {
     }
 
     // Compute normals
-    PAL_ComputeNormals (
-        vertices, num_vertices, indices, num_indices, 8, 0, 3
-    );
+    PAL_ComputeNormals (vertices, num_vertices, indices, num_indices, 8, 0, 3);
 
     // Upload to GPU
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
-    SDL_GPUBuffer* vbo = PAL_UploadVertices (device, vertices, vertices_size, &vbo);
+    SDL_GPUBuffer* vbo =
+        PAL_UploadVertices (device, vertices, vertices_size, &vbo);
     free (vertices);
     if (vbo == NULL) {
         free (indices);
@@ -94,22 +94,21 @@ PAL_MeshComponent PAL_CreateLatheMesh (static PAL_LatheMeshCreateInfo* info) {
     }
 
     Uint64 indices_size = num_indices * sizeof (Uint32);
-    SDL_GPUBuffer* ibo = PAL_UploadIndices (device, indices, indices_size, &ibo);
+    SDL_GPUBuffer* ibo =
+        PAL_UploadIndices (device, indices, indices_size, &ibo);
     free (indices);
     if (ibo == NULL) {
         SDL_ReleaseGPUBuffer (device, vbo);
         return NULL;
     }
-    
+
     PAL_MeshComponent* mesh = malloc (sizeof (PAL_MeshComponent));
     if (mesh == NULL) return NULL;
-    *mesh = (PAL_MeshComponent) {
-        .vertex_buffer = vbo,
-        .num_vertices = num_vertices,
-        .index_buffer = ibo,
-        .num_indices = num_indices,
-        .index_size = SDL_GPU_INDEXELEMENTSIZE_32BIT
-    };
+    *mesh = (PAL_MeshComponent) {.vertex_buffer = vbo,
+                                 .num_vertices = num_vertices,
+                                 .index_buffer = ibo,
+                                 .num_indices = num_indices,
+                                 .index_size = SDL_GPU_INDEXELEMENTSIZE_32BIT};
 
     return out_mesh;
 }

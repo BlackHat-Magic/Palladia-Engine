@@ -157,7 +157,12 @@ typedef struct {
     SDL_GPUBuffer* point_ssbo;
     Uint32 point_size;
 } gpu_renderer;
-gpu_renderer* renderer_init (SDL_GPUDevice* device, SDL_Window* window, const Uint32 width, const Uint32 height);
+gpu_renderer* renderer_init (
+    SDL_GPUDevice* device,
+    SDL_Window* window,
+    const Uint32 width,
+    const Uint32 height
+);
 
 // Ambient Lights
 // rgba -> rgb + intensity

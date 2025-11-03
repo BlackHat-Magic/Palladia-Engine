@@ -4,7 +4,8 @@
 #include <ecs/ecs.h>
 #include <geometry/lathe.h>
 
-PAL_MeshComponent* PAL_CreateCapsuleMesh (static PAL_CapsuleMeshCreateInfo* info) {
+PAL_MeshComponent*
+PAL_CreateCapsuleMesh (static PAL_CapsuleMeshCreateInfo* info) {
     if (info->cap_segments < 1) info->cap_segments = 1;
 
     int num_points = (info->cap_segments + 1) * 2;
@@ -23,9 +24,11 @@ PAL_MeshComponent* PAL_CreateCapsuleMesh (static PAL_CapsuleMeshCreateInfo* info
         idx++;
     }
 
-    int top_start = (info->height <= 0.0f) ? info->cap_segments - 1 : info->cap_segments;
+    int top_start =
+        (info->height <= 0.0f) ? info->cap_segments - 1 : info->cap_segments;
     for (int i = top_start; i >= 0; i--) {
-        float theta = (float) i / (float) info->cap_segments * (float) M_PI * 0.5f;
+        float theta =
+            (float) i / (float) info->cap_segments * (float) M_PI * 0.5f;
         points[idx].x = info->radius * sinf (theta);
         points[idx].y = half_height + info->radius * cosf (theta);
         if (i < top_start || info->height > 0.0f) {

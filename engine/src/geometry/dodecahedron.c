@@ -6,7 +6,8 @@
 #include <geometry/g_common.h>
 #include <math/matrix.h>
 
-PAL_MeshComponent create_dodecahedron_mesh (float radius, SDL_GPUDevice* device) {
+PAL_MeshComponent
+create_dodecahedron_mesh (float radius, SDL_GPUDevice* device) {
     float phi = (1.0f + sqrtf (5.0f)) / 2.0f;
     float phi_inv = 1.0f / phi;
 
@@ -64,9 +65,7 @@ PAL_MeshComponent create_dodecahedron_mesh (float radius, SDL_GPUDevice* device)
     };
 
     // Compute normals
-    PAL_ComputeNormals (
-        vertices, num_vertices, indices, num_indices, 8, 0, 3
-    );
+    PAL_ComputeNormals (vertices, num_vertices, indices, num_indices, 8, 0, 3);
 
     SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
@@ -84,10 +83,10 @@ PAL_MeshComponent create_dodecahedron_mesh (float radius, SDL_GPUDevice* device)
 
     PAL_MeshComponent out_mesh =
         (PAL_MeshComponent) {.vertex_buffer = vbo,
-                         .num_vertices = (Uint32) num_vertices,
-                         .index_buffer = ibo,
-                         .num_indices = (Uint32) num_indices,
-                         .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
+                             .num_vertices = (Uint32) num_vertices,
+                             .index_buffer = ibo,
+                             .num_indices = (Uint32) num_indices,
+                             .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
 
     return out_mesh;
 }

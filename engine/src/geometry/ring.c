@@ -117,10 +117,10 @@ PAL_MeshComponent create_ring_mesh (
 
     PAL_MeshComponent out_mesh =
         (PAL_MeshComponent) {.vertex_buffer = vbo,
-                         .num_vertices = (Uint32) num_vertices,
-                         .index_buffer = ibo,
-                         .num_indices = (Uint32) num_indices,
-                         .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
+                             .num_vertices = (Uint32) num_vertices,
+                             .index_buffer = ibo,
+                             .num_indices = (Uint32) num_indices,
+                             .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
 
     return out_mesh;
 }

@@ -5,7 +5,8 @@
 #include <geometry/icosahedron.h>
 #include <math/matrix.h>
 
-PAL_MeshComponent create_icosahedron_mesh (float radius, SDL_GPUDevice* device) {
+PAL_MeshComponent
+create_icosahedron_mesh (float radius, SDL_GPUDevice* device) {
     PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
     const int num_vertices = 12;
     float* vertices = (float*) malloc (num_vertices * 8 * sizeof (float));
@@ -70,9 +71,7 @@ PAL_MeshComponent create_icosahedron_mesh (float radius, SDL_GPUDevice* device) 
                                    2,  4,  11, 6, 2, 10, 8, 6,  7,  9,  8,  1};
 
     // Compute normals using standard_indices
-    PAL_ComputeNormals (
-        vertices, num_vertices, standard_indices, 60, 8, 0, 3
-    );
+    PAL_ComputeNormals (vertices, num_vertices, standard_indices, 60, 8, 0, 3);
 
     SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
@@ -91,10 +90,10 @@ PAL_MeshComponent create_icosahedron_mesh (float radius, SDL_GPUDevice* device) 
 
     PAL_MeshComponent out_mesh =
         (PAL_MeshComponent) {.vertex_buffer = vbo,
-                         .num_vertices = (Uint32) num_vertices,
-                         .index_buffer = ibo,
-                         .num_indices = 60,
-                         .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
+                             .num_vertices = (Uint32) num_vertices,
+                             .index_buffer = ibo,
+                             .num_indices = 60,
+                             .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
 
     return out_mesh;
 }

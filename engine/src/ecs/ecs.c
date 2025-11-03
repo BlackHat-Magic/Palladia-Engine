@@ -163,7 +163,9 @@ void PAL_AddMeshComponent (Entity e, PAL_MeshComponent* mesh) {
 }
 PAL_MeshComponent* PAL_GetMeshComponent (Entity e) {
     // the most safe and wonderful getter 🥰
-    PAL_MeshComponent** mesh = (PAL_MeshComponent**) pool_get (&mesh_pool, e, sizeof (PAL_MeshComponent));
+    PAL_MeshComponent** mesh = (PAL_MeshComponent**) pool_get (
+        &mesh_pool, e, sizeof (PAL_MeshComponent)
+    );
     return *mesh;
 }
 bool has_mesh (Entity e) {
@@ -301,7 +303,8 @@ void add_ambient_light (Entity e, SDL_FColor color, gpu_renderer* renderer) {
             .size = ssbo_size,
             .usage = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ,
         };
-        renderer->ambient_ssbo = SDL_CreateGPUBuffer (renderer->device, &ssbo_info);
+        renderer->ambient_ssbo =
+            SDL_CreateGPUBuffer (renderer->device, &ssbo_info);
         if (renderer->ambient_ssbo == NULL) {
             return;
         }
@@ -311,7 +314,8 @@ void add_ambient_light (Entity e, SDL_FColor color, gpu_renderer* renderer) {
         .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
         .size = ssbo_size,
     };
-    SDL_GPUTransferBuffer* tbuf = SDL_CreateGPUTransferBuffer (renderer->device, &tbuf_info);
+    SDL_GPUTransferBuffer* tbuf =
+        SDL_CreateGPUTransferBuffer (renderer->device, &tbuf_info);
     void* map = SDL_MapGPUTransferBuffer (renderer->device, tbuf, false);
     if (map == NULL) {
         SDL_ReleaseGPUTransferBuffer (renderer->device, tbuf);
@@ -322,8 +326,8 @@ void add_ambient_light (Entity e, SDL_FColor color, gpu_renderer* renderer) {
     SDL_UnmapGPUTransferBuffer (renderer->device, tbuf);
 
     // upload data
-    SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer(renderer->device);
-    SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
+    SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer (renderer->device);
+    SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass (cmd);
     SDL_GPUTransferBufferLocation tbuf_loc = {
         .transfer_buffer = tbuf,
         .offset = 0,
@@ -336,7 +340,7 @@ void add_ambient_light (Entity e, SDL_FColor color, gpu_renderer* renderer) {
     SDL_UploadToGPUBuffer (pass, &tbuf_loc, &tbuf_region, false);
     SDL_EndGPUCopyPass (pass);
     SDL_SubmitGPUCommandBuffer (cmd);
-    SDL_ReleaseGPUTransferBuffer(renderer->device, tbuf);
+    SDL_ReleaseGPUTransferBuffer (renderer->device, tbuf);
 }
 AmbientLightComponent* get_ambient_light (Entity e) {
     return (AmbientLightComponent*) pool_get (
@@ -368,7 +372,8 @@ void add_point_light (Entity e, SDL_FColor color, gpu_renderer* renderer) {
         // copy in the color
         PointLightComponent* light = get_point_light (light_entity);
         // light = NULL;
-        gpu_light.color = light ? *light : (SDL_FColor) {1.0f, 1.0f, 1.0f, 1.0f};
+        gpu_light.color =
+            light ? *light : (SDL_FColor) {1.0f, 1.0f, 1.0f, 1.0f};
 
         // copy in the position
         TransformComponent* transform = get_transform (light_entity);
@@ -382,26 +387,28 @@ void add_point_light (Entity e, SDL_FColor color, gpu_renderer* renderer) {
             position = (vec4) {0};
         }
         gpu_light.position = position;
-        
+
         all_lights[i] = gpu_light;
     }
 
     // release existing ssbo if it's too small
     Uint32 ssbo_size = point_light_pool.count * sizeof (GPUPointLight);
-    ssbo_size = ssbo_size  > 1024 ? ssbo_size : 1024;
+    ssbo_size = ssbo_size > 1024 ? ssbo_size : 1024;
     if (renderer->point_ssbo && renderer->point_size < ssbo_size) {
         SDL_ReleaseGPUBuffer (renderer->device, renderer->point_ssbo);
         renderer->point_ssbo = NULL;
         renderer->point_size = 0;
     }
 
-    // if ssbo is uninitialized (or if it was released because too small), create one
+    // if ssbo is uninitialized (or if it was released because too small),
+    // create one
     if (renderer->point_ssbo == NULL) {
         SDL_GPUBufferCreateInfo ssbo_info = {
             .size = ssbo_size,
             .usage = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ
         };
-        renderer->point_ssbo = SDL_CreateGPUBuffer (renderer->device, &ssbo_info);
+        renderer->point_ssbo =
+            SDL_CreateGPUBuffer (renderer->device, &ssbo_info);
         if (renderer->point_ssbo == NULL) {
             return;
         }
@@ -413,7 +420,8 @@ void add_point_light (Entity e, SDL_FColor color, gpu_renderer* renderer) {
         .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
         .size = ssbo_size
     };
-    SDL_GPUTransferBuffer* tbuf = SDL_CreateGPUTransferBuffer (renderer->device, &tbuf_info);
+    SDL_GPUTransferBuffer* tbuf =
+        SDL_CreateGPUTransferBuffer (renderer->device, &tbuf_info);
     void* map = SDL_MapGPUTransferBuffer (renderer->device, tbuf, false);
     if (map == NULL) {
         SDL_ReleaseGPUTransferBuffer (renderer->device, tbuf);
@@ -424,8 +432,8 @@ void add_point_light (Entity e, SDL_FColor color, gpu_renderer* renderer) {
     SDL_UnmapGPUTransferBuffer (renderer->device, tbuf);
 
     // upload data
-    SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer(renderer->device);
-    SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
+    SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer (renderer->device);
+    SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass (cmd);
     SDL_GPUTransferBufferLocation tbuf_loc = {
         .transfer_buffer = tbuf,
         .offset = 0,
@@ -438,7 +446,7 @@ void add_point_light (Entity e, SDL_FColor color, gpu_renderer* renderer) {
     SDL_UploadToGPUBuffer (pass, &tbuf_loc, &tbuf_region, false);
     SDL_EndGPUCopyPass (pass);
     SDL_SubmitGPUCommandBuffer (cmd);
-    SDL_ReleaseGPUTransferBuffer(renderer->device, tbuf);
+    SDL_ReleaseGPUTransferBuffer (renderer->device, tbuf);
 }
 PointLightComponent* get_point_light (Entity e) {
     return (PointLightComponent*) pool_get (
@@ -453,7 +461,12 @@ void remove_point_light (Entity e) {
 }
 
 // TODO: more robust???
-gpu_renderer* renderer_init (SDL_GPUDevice* device, SDL_Window* window, const Uint32 width, const Uint32 height) {
+gpu_renderer* renderer_init (
+    SDL_GPUDevice* device,
+    SDL_Window* window,
+    const Uint32 width,
+    const Uint32 height
+) {
     // create renderer
     gpu_renderer* renderer = calloc (1, sizeof (gpu_renderer));
     if (renderer == NULL) {
@@ -480,7 +493,9 @@ gpu_renderer* renderer_init (SDL_GPUDevice* device, SDL_Window* window, const Ui
     renderer->depth_texture = SDL_CreateGPUTexture (device, &depth_info);
     if (renderer->depth_texture == NULL) {
         free (renderer);
-        SDL_Log ("Failed to create renderer depth texture: %s", SDL_GetError ());
+        SDL_Log (
+            "Failed to create renderer depth texture: %s", SDL_GetError ()
+        );
         return NULL;
     }
 
@@ -704,9 +719,12 @@ SDL_AppResult render_system (
         .cam_rot = cam_trans->rotation,
         .ambient_count = ambient_count,
         .point_count = point_count,
-        .pad0 = 0, .pad1 = 1,
+        .pad0 = 0,
+        .pad1 = 1,
     };
-    SDL_PushGPUFragmentUniformData (cmd, 0, &fragment_ubo, sizeof (fragment_ubo));
+    SDL_PushGPUFragmentUniformData (
+        cmd, 0, &fragment_ubo, sizeof (fragment_ubo)
+    );
 
     *prerender = SDL_GetTicksNS ();
     for (Uint32 i = 0; i < mesh_pool.count; i++) {
@@ -752,7 +770,9 @@ SDL_AppResult render_system (
             .sampler = mat->sampler
         };
         SDL_BindGPUFragmentSamplers (pass, 0, &tex_bind, 1);
-        SDL_GPUBuffer* buffers[] = {renderer->ambient_ssbo, renderer->point_ssbo};
+        SDL_GPUBuffer* buffers[] = {
+            renderer->ambient_ssbo, renderer->point_ssbo
+        };
         SDL_BindGPUFragmentStorageBuffers (pass, 0, buffers, 2);
 
         if (mesh->index_buffer) {
