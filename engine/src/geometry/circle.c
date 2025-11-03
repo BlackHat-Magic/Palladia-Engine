@@ -4,7 +4,8 @@
 #include <geometry/circle.h>
 #include <geometry/g_common.h>
 
-PAL_MeshComponent PAL_CreateCircleMesh (static PAL_CircleMeshCreateInfo* info) {
+PAL_MeshComponent*
+PAL_CreateCircleMesh (static PAL_CircleMeshCreateInfo* info) {
     if (info->segments < 3) return NULL;
 
     Uint32 num_vertices = info->segments + 1; // Center + ring

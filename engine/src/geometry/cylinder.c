@@ -3,7 +3,7 @@
 #include <geometry/cylinder.h>
 #include <geometry/lathe.h>
 
-PAL_MeshComponent
+PAL_MeshComponent*
 PAL_CreateCylinderMesh (static PAL_CylinderMeshCreateInfo* info) {
     if (info->radial_segments < 3 || info->height_segments < 1) return NULL;
 

@@ -81,7 +81,7 @@ PAL_MeshComponent* PAL_CreateBoxMesh (PAL_BoxMeshCreateInfo* info) {
         .num_vertices = 24,
         .index_buffer = ibo,
         .num_indices = 36,
-        .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT,
+        .index_size = SDL_GPU_INDEXELEMENTSIZE_32BIT,
     };
 
     return mesh;

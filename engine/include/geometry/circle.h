@@ -2,7 +2,7 @@
 
 #include <ecs/ecs.h>
 
-PAL_MeshComponent PAL_CreateCircleMesh (static PAL_CircleMeshCreateInfo* info);
+PAL_MeshComponent* PAL_CreateCircleMesh (static PAL_CircleMeshCreateInfo* info);
 
 typedef struct {
     float radius;

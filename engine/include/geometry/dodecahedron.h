@@ -3,4 +3,9 @@
 #include <ecs/ecs.h>
 
 PAL_MeshComponent
-create_dodecahedron_mesh (float radius, SDL_GPUDevice* device);
+PAL_CreateDodecahedronMesh (static PAL_DodecahedronMeshCreateInfo* info);
+
+typedef struct {
+    float radius;
+    SDL_GPUDevice* device
+} PAL_DodecahedronMeshCreateInfo;

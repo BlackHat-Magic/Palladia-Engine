@@ -2,7 +2,7 @@
 
 #include <ecs/ecs.h>
 
-PAL_MeshComponent
+PAL_MeshComponent*
 PAL_CreateCylinderMesh (static PAL_CylinderMeshCreateInfo* info);
 
 typedef struct {

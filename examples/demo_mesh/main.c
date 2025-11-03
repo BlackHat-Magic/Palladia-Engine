@@ -237,8 +237,15 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
 
     state->meshes[GEO_OCTAHEDRON] = create_octahedron_mesh (0.5f, state->renderer->device);
     if (state->meshes[GEO_OCTAHEDRON].vertex_buffer == NULL) return SDL_APP_FAILURE;
-    state->meshes[GEO_DODECAHEDRON] = create_dodecahedron_mesh (0.5f, state->renderer->device);
-    if (state->meshes[GEO_DODECAHEDRON].vertex_buffer == NULL) return SDL_APP_FAILURE;
+
+    // dodecahedron
+    PAL_DodecahedronMeshCreateInfo dodecahedron_info = {
+        .radius = 0.5f,
+        .device = state->renderer->device
+    };
+    state->meshes[GEO_DODECAHEDRON] = PAL_CreateDodecahedronMesh (&dodecahedron_info);
+    if (state->meshes[GEO_DODECAHEDRON] == NULL) return SDL_APP_FAILURE;
+
     state->meshes[GEO_ICOSAHEDRON] = create_icosahedron_mesh (0.5f, state->renderer->device);
     if (state->meshes[GEO_ICOSAHEDRON].vertex_buffer == NULL) return SDL_APP_FAILURE;
 

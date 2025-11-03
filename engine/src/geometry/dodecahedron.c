@@ -6,8 +6,8 @@
 #include <geometry/g_common.h>
 #include <math/matrix.h>
 
-PAL_MeshComponent
-create_dodecahedron_mesh (float radius, SDL_GPUDevice* device) {
+PAL_MeshComponent*
+PAL_CreateDodecahedronMesh (static PAL_DodecahedronMeshCreateInfo* info) {
     float phi = (1.0f + sqrtf (5.0f)) / 2.0f;
     float phi_inv = 1.0f / phi;
 
@@ -25,10 +25,7 @@ create_dodecahedron_mesh (float radius, SDL_GPUDevice* device) {
 
     Uint32 num_vertices = 20;
     float* vertices = (float*) malloc (num_vertices * 8 * sizeof (float));
-    if (!vertices) {
-        SDL_Log ("Failed to allocate vertices for dodecahedron mesh");
-        return (PAL_MeshComponent) {0};
-    }
+    if (vertices == NULL) return NULL;
 
     Uint32 vertex_idx = 0;
     for (Uint32 i = 0; i < num_vertices; i++) {
@@ -36,7 +33,7 @@ create_dodecahedron_mesh (float radius, SDL_GPUDevice* device) {
             raw_verts[i * 3], raw_verts[i * 3 + 1], raw_verts[i * 3 + 2]
         };
         float len = sqrtf (pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
-        pos = vec3_scale (pos, radius / len);
+        pos = vec3_scale (pos, info->radius / len);
 
         vertices[vertex_idx++] = pos.x;
         vertices[vertex_idx++] = pos.y;
@@ -46,7 +43,7 @@ create_dodecahedron_mesh (float radius, SDL_GPUDevice* device) {
         vertices[vertex_idx++] = 0.0f; // nz
 
         // Spherical UV mapping using normalized position
-        vec3 norm_pos = vec3_scale (pos, 1.0f / radius);
+        vec3 norm_pos = vec3_scale (pos, 1.0f / info->radius);
         float u =
             0.5f + atan2f (norm_pos.z, norm_pos.x) / (2.0f * (float) M_PI);
         float v = acosf (norm_pos.y) / (float) M_PI;
@@ -67,27 +64,31 @@ create_dodecahedron_mesh (float radius, SDL_GPUDevice* device) {
     // Compute normals
     PAL_ComputeNormals (vertices, num_vertices, indices, num_indices, 8, 0, 3);
 
-    SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
-    Uint32 vbo_failed =
-        PAL_UploadVertices (device, vertices, vertices_size, &vbo);
+    SDL_GPUBuffer* vbo =
+        PAL_UploadVertices (info->device, vertices, vertices_size, &vbo);
     free (vertices);
-    if (vbo_failed) return (PAL_MeshComponent) {0};
+    if (vbo == NULL) return NULL;
 
-    SDL_GPUBuffer* ibo = NULL;
     Uint64 indices_size = num_indices * sizeof (Uint32);
-    Uint32 ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
-    if (ibo_failed) {
-        SDL_ReleaseGPUBuffer (device, vbo);
-        return (PAL_MeshComponent) {0};
+    SDL_GPUBuffer* ibo =
+        PAL_UploadIndices (info->device, indices, indices_size, &ibo);
+    if (ibo == NULL) {
+        SDL_ReleaseGPUBuffer (info->device, vbo);
+        return NULL;
     }
 
-    PAL_MeshComponent out_mesh =
-        (PAL_MeshComponent) {.vertex_buffer = vbo,
-                             .num_vertices = (Uint32) num_vertices,
-                             .index_buffer = ibo,
-                             .num_indices = (Uint32) num_indices,
-                             .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
+    PAL_MeshComponent* mesh = malloc (sizeof (PAL_MeshComponent));
+    if (mesh == NULL) {
+        SDL_ReleaseGPUBuffer (info->device, vbo);
+        SDL_ReleaseGPUBuffer (info->device, ibo);
+        return NULL;
+    }
+    *mesh = (PAL_MeshComponent) {.vertex_buffer = vbo,
+                                 .num_vertices = (Uint32) num_vertices,
+                                 .index_buffer = ibo,
+                                 .num_indices = (Uint32) num_indices,
+                                 .index_size = SDL_GPU_INDEXELEMENTSIZE_32BIT};
 
-    return out_mesh;
+    return mesh;
 }
