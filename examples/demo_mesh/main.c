@@ -214,8 +214,17 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
     state->meshes[GEO_CIRCLE] = PAL_CreateCircleMesh (&circle_info);
     if (state->meshes[GEO_CIRCLE] == NULL) return SDL_APP_FAILURE;
 
-    state->meshes[GEO_PLANE] = create_plane_mesh (1.0f, 1.0f, 1, 1, state->renderer->device);
-    if (state->meshes[GEO_PLANE].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    // plane
+    PAL_PlaneMeshCreateInfo plane_info = {
+        .width = 1.0f,
+        .height = 1.0f,
+        .width_segments = 1,
+        .height_segments = 1,
+        .device = state->renderer->device
+    };
+    state->meshes[GEO_PLANE] = PAL_CreatePlaneMesh (&plane_info);
+    if (state->meshes[GEO_PLANE] == NULL) return SDL_APP_FAILURE;
+
     state->meshes[GEO_RING] = create_ring_mesh (
         0.25f, 0.5f, 16, 16, 0.0f, 2.0 * (float) M_PI, state->renderer->device
     );

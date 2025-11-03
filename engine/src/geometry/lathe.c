@@ -113,5 +113,5 @@ PAL_MeshComponent PAL_CreateLatheMesh (static PAL_LatheMeshCreateInfo* info) {
                                  .num_indices = num_indices,
                                  .index_size = SDL_GPU_INDEXELEMENTSIZE_32BIT};
 
-    return out_mesh;
+    return mesh;
 }
