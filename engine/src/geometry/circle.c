@@ -5,7 +5,7 @@
 #include <geometry/g_common.h>
 
 PAL_MeshComponent*
-PAL_CreateCircleMesh (static PAL_CircleMeshCreateInfo* info) {
+PAL_CreateCircleMesh (const PAL_CircleMeshCreateInfo* info) {
     if (info->segments < 3) return NULL;
 
     Uint32 num_vertices = info->segments + 1; // Center + ring
@@ -74,9 +74,9 @@ PAL_CreateCircleMesh (static PAL_CircleMeshCreateInfo* info) {
     SDL_GPUBuffer* ibo =
         PAL_UploadIndices (info->device, indices, indices_size);
     free (indices);
-    if (ibo_failed) {
+    if (ibo == NULL) {
         SDL_ReleaseGPUBuffer (info->device, vbo);
-        return NULL
+        return NULL;
     }
 
     PAL_MeshComponent* mesh = malloc (sizeof (PAL_MeshComponent));
@@ -88,7 +88,7 @@ PAL_CreateCircleMesh (static PAL_CircleMeshCreateInfo* info) {
     *mesh = (PAL_MeshComponent) {
         .vertex_buffer = vbo, .num_vertices = num_vertices, .index_buffer = ibo,
         .num_indices = num_indices, .index_size = SDL_GPU_INDEXELEMENTSIZE_32BIT
-    }
+    };
 
     return mesh;
 }

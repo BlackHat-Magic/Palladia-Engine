@@ -9,7 +9,7 @@
 SDL_GPUBuffer* PAL_UploadVertices (
     SDL_GPUDevice* device,
     const void* vertices,
-    Uint64 vertices_size,
+    Uint64 vertices_size
 ) {
     SDL_GPUBufferCreateInfo vbo_info = {
         .size = vertices_size,
@@ -70,7 +70,7 @@ SDL_GPUBuffer* PAL_UploadVertices (
 SDL_GPUBuffer* PAL_UploadIndices (
     SDL_GPUDevice* device,
     const void* indices,
-    Uint64 indices_size,
+    Uint64 indices_size
 ) {
     SDL_GPUBufferCreateInfo ibo_info = {
         .size = indices_size,

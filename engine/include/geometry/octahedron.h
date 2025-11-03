@@ -6,4 +6,4 @@
 #define PAL_OctahedronMeshCreateInfo PAL_PlatonicMeshCreateInfo
 
 PAL_MeshComponent*
-PAL_CreateOctahedronMesh (static PAL_OctahedronMeshCreateInfo* info);
+PAL_CreateOctahedronMesh (const PAL_OctahedronMeshCreateInfo* info);

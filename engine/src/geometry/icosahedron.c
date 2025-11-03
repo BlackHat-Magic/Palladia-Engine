@@ -5,7 +5,7 @@
 #include <math/matrix.h>
 
 PAL_MeshComponent*
-PAL_CreateIcosahedronMesh (static PAL_IcosahedronMeshCreateInfo* info) {
+PAL_CreateIcosahedronMesh (const PAL_IcosahedronMeshCreateInfo* info) {
     const Uint32 num_vertices = 12;
     float* vertices = (float*) malloc (num_vertices * 8 * sizeof (float));
     if (vertices == NULL) return NULL;

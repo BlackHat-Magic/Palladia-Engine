@@ -6,4 +6,4 @@
 #define PAL_IcosahedronMeshCreateInfo PAL_PlatonicMeshCreateInfo
 
 PAL_MeshComponent*
-PAL_CreateIcosahedronMesh (static PAL_IcosahedronMeshCreateInfo* info);
+PAL_CreateIcosahedronMesh (const PAL_IcosahedronMeshCreateInfo* info);

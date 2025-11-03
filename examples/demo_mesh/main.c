@@ -102,13 +102,13 @@ SDL_AppResult SDL_AppEvent (void* appstate, SDL_Event* event) {
         if (event->key.key == SDLK_UP) {
             if (state->current_mesh < GEO_TORUS) {
                 PAL_MeshComponent* current_mesh = PAL_GetMeshComponent (state->entity);
-                *current_mesh = state->meshes[++state->current_mesh];
+                *current_mesh = *state->meshes[++state->current_mesh];
             }
         }
         if (event->key.key == SDLK_DOWN) {
             if (state->current_mesh > GEO_CIRCLE) {
                 PAL_MeshComponent* current_mesh = PAL_GetMeshComponent (state->entity);
-                *current_mesh = state->meshes[--state->current_mesh];
+                *current_mesh = *state->meshes[--state->current_mesh];
             }
         }
         break;
@@ -124,7 +124,7 @@ SDL_AppResult SDL_AppEvent (void* appstate, SDL_Event* event) {
     return SDL_APP_CONTINUE;
 }
 
-SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
+SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     SDL_SetAppMetadata (
         "Asmadi Engine Box Geometry", "0.1.0", "xyz.lukeh.Asmadi-Engine"
     );
@@ -258,7 +258,7 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
 
     // octahedron
     PAL_OctahedronMeshCreateInfo octahedron_info = {
-        .radius = 0.5f;
+        .radius = 0.5f,
         .device = state->renderer->device
     };
     state->meshes[GEO_OCTAHEDRON] = PAL_CreateOctahedronMesh (&octahedron_info);
@@ -344,7 +344,7 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
         .device = state->renderer->device
     };
     state->meshes[GEO_TORUS] = PAL_CreateTorusMesh (&torus_info);
-    if (state->meshes[GEO_TORUS].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    if (state->meshes[GEO_TORUS] == NULL) return SDL_APP_FAILURE;
 
     // add mesh
     PAL_AddMeshComponent (state->entity, state->meshes[0]);

@@ -5,14 +5,7 @@
 #include <geometry/torus.h>
 #include <math/matrix.h>
 
-PAL_MeshComponent* PAL_CreateTorusMesh (
-    float info->radius,
-    float info->tube_radius,
-    Uint32 info->radial_segments,
-    Uint32 info->tubular_segments,
-    float info->arc,
-    SDL_GPUDevice * info->device
-) {
+PAL_MeshComponent* PAL_CreateTorusMesh (const PAL_TorusMeshCreateInfo* info) {
     if (info->radial_segments < 3 || info->tubular_segments < 3) return NULL;
     if (info->tube_radius <= 0.0f || info->radius <= 0.0f) return NULL;
     if (info->arc <= 0.0f || info->arc > 2.0f * (float) M_PI) return NULL;

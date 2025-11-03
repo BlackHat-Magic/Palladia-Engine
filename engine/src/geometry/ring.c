@@ -4,7 +4,7 @@
 #include <geometry/g_common.h>
 #include <geometry/ring.h>
 
-PAL_MeshComponent* PAL_CreateRingMesh (static PAL_RingMeshCreateInfo* info) {
+PAL_MeshComponent* PAL_CreateRingMesh (const PAL_RingMeshCreateInfo* info) {
     if (info->theta_segments < 3) return NULL;
     if (info->phi_segments < 1) return NULL;
     if (info->inner_radius >= info->outer_radius) return NULL;

@@ -1,10 +1,11 @@
+#include <stdlib.h>
 #include <math.h>
 
 #include <geometry/g_common.h>
 #include <geometry/tetrahedron.h>
 
 PAL_MeshComponent*
-PAL_CreateTetrahedronMesh (static PAL_TetrahedronMeshCreateInfo* info) {
+PAL_CreateTetrahedronMesh (const PAL_TetrahedronMeshCreateInfo* info) {
     const Uint32 num_vertices = 4;
     float vertices[4 * 8] = {
         1.0f,  1.0f,  1.0f,  0.0f, 0.0f, 0.0f, 0.5f, 0.5f, // Vert 0
@@ -17,7 +18,7 @@ PAL_CreateTetrahedronMesh (static PAL_TetrahedronMeshCreateInfo* info) {
     for (Uint32 i = 0; i < num_vertices; i++) {
         vec3 pos = {vertices[i * 8], vertices[i * 8 + 1], vertices[i * 8 + 2]};
         pos = vec3_normalize (pos);
-        pos = vec3_scale (pos, radius);
+        pos = vec3_scale (pos, info->radius);
         vertices[i * 8] = pos.x;
         vertices[i * 8 + 1] = pos.y;
         vertices[i * 8 + 2] = pos.z;
@@ -47,21 +48,21 @@ PAL_CreateTetrahedronMesh (static PAL_TetrahedronMeshCreateInfo* info) {
 
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
     SDL_GPUBuffer* vbo =
-        PAL_UploadVertices (device, vertices, vertices_size);
+        PAL_UploadVertices (info->device, vertices, vertices_size);
     if (vbo == NULL) return NULL;
 
     Uint64 indices_size = num_indices * sizeof (Uint32);
     SDL_GPUBuffer* ibo =
-        PAL_UploadIndices (device, indices, indices_size);
+        PAL_UploadIndices (info->device, indices, indices_size);
     if (ibo == NULL) {
-        SDL_ReleaseGPUBuffer (device, vbo);
+        SDL_ReleaseGPUBuffer (info->device, vbo);
         return NULL;
     }
 
     PAL_MeshComponent* mesh = malloc (sizeof (PAL_MeshComponent));
     if (mesh == NULL) {
-        SDL_ReleaseGPUBuffer (device, vbo);
-        SDL_ReleaseGPUBuffer (device, ibo);
+        SDL_ReleaseGPUBuffer (info->device, vbo);
+        SDL_ReleaseGPUBuffer (info->device, ibo);
         return NULL;
     }
     *mesh = (PAL_MeshComponent) {.vertex_buffer = vbo,

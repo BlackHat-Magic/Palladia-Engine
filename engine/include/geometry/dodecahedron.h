@@ -5,5 +5,5 @@
 
 #define PAL_DodecahedronMeshCreateInfo PAL_PlatonicMeshCreateInfo
 
-PAL_MeshComponent
-PAL_CreateDodecahedronMesh (static PAL_DodecahedronMeshCreateInfo* info);
+PAL_MeshComponent*
+PAL_CreateDodecahedronMesh (const PAL_DodecahedronMeshCreateInfo* info);

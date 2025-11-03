@@ -3,8 +3,6 @@
 #include <ecs/ecs.h>
 #include <math/matrix.h>
 
-PAL_MeshComponent PAL_CreateLatheMesh (static PAL_LatheMeshCreateInfo* info);
-
 typedef struct {
     vec2* path;
     Uint32 path_length;
@@ -13,3 +11,5 @@ typedef struct {
     float phi_length;
     SDL_GPUDevice* device;
 } PAL_LatheMeshCreateInfo;
+
+PAL_MeshComponent* PAL_CreateLatheMesh (const PAL_LatheMeshCreateInfo* info);

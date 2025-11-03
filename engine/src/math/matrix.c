@@ -277,7 +277,7 @@ void mat4_look_at (mat4 m, vec3 eye, vec3 center, vec3 up) {
     m[MAT4_IDX (2, 3)] = vec3_dot (f, eye);
 }
 
-void random_seed (unsigned Uint32 seed) {
+void random_seed (Uint32 seed) {
     srand (seed);
 }
 

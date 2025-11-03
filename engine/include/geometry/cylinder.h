@@ -2,9 +2,6 @@
 
 #include <ecs/ecs.h>
 
-PAL_MeshComponent*
-PAL_CreateCylinderMesh (static PAL_CylinderMeshCreateInfo* info);
-
 typedef struct {
     float radius_top;
     float radius_bottom;
@@ -16,3 +13,6 @@ typedef struct {
     float theta_length;
     SDL_GPUDevice* device;
 } PAL_CylinderMeshCreateInfo;
+
+PAL_MeshComponent*
+PAL_CreateCylinderMesh (const PAL_CylinderMeshCreateInfo* info);

@@ -1,8 +1,10 @@
+#include <stdlib.h>
+
 #include <ecs/ecs.h>
 #include <geometry/box.h>
 #include <geometry/g_common.h>
 
-PAL_MeshComponent* PAL_CreateBoxMesh (PAL_BoxMeshCreateInfo* info) {
+PAL_MeshComponent* PAL_CreateBoxMesh (const PAL_BoxMeshCreateInfo* info) {
     float wx = info->w / 2.0f;
     float hy = info->h / 2.0f;
     float lz = info->l / 2.0f;

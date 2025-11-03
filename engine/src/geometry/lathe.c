@@ -5,36 +5,35 @@
 #include <geometry/lathe.h>
 #include <math/matrix.h>
 
-PAL_MeshComponent PAL_CreateLatheMesh (static PAL_LatheMeshCreateInfo* info) {
-    PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
-    if (info->num_points < 2) return NULL;
-    if (phi_segments < 3) return NULL;
+PAL_MeshComponent* PAL_CreateLatheMesh (const PAL_LatheMeshCreateInfo* info) {
+    if (info->path_length < 2) return NULL;
+    if (info->segments < 3) return NULL;
 
-    Uint32 num_phi = phi_segments + 1; // Rings closed
-    Uint32 num_vertices = num_points * num_phi;
+    Uint32 num_phi = info->segments + 1; // Rings closed
+    Uint32 num_vertices = info->path_length * num_phi;
 
     float* vertices = (float*) malloc (
         num_vertices * 8 * sizeof (float)
     ); // pos.x,y,z + normal.x,y,z + uv.u,v
     if (vertices == NULL)
-        return NULL
+        return NULL;
 
                    // Generate vertices
                    Uint32 vertex_idx = 0;
-    for (Uint32 i = 0; i < num_points; i++) {
-        float u = (float) i / (float) (num_points - 1); // Axial UV
+    for (Uint32 i = 0; i < info->path_length; i++) {
+        float u = (float) i / (float) (info->path_length - 1); // Axial UV
 
         for (Uint32 j = 0; j < num_phi; j++) {
-            float phi_frac = (float) j / (float) phi_segments;
-            float phi = phi_start + phi_frac * phi_length;
+            float phi_frac = (float) j / (float) info->segments;
+            float phi = info->phi_start + phi_frac * info->phi_length;
             float cos_phi = cosf (phi);
             float sin_phi = sinf (phi);
 
             // Position: rotate point around Y (points.x is radius, points.y is
             // height)
-            float x = points[i].x * cos_phi;
-            float y = points[i].y;
-            float z = points[i].x * sin_phi;
+            float x = info->path[i].x * cos_phi;
+            float y = info->path[i].y;
+            float z = info->path[i].x * sin_phi;
 
             // UV: u along path, v around phi (0-1)
             float v = phi_frac;
@@ -52,7 +51,7 @@ PAL_MeshComponent PAL_CreateLatheMesh (static PAL_LatheMeshCreateInfo* info) {
     }
 
     // Generate indices (quads between rings, flipped winding for outward faces)
-    Uint32 num_indices = (num_points - 1) * phi_segments * 6;
+    Uint32 num_indices = (info->path_length - 1) * info->segments * 6;
     Uint32* indices = (Uint32*) malloc (num_indices * sizeof (Uint32));
     if (indices == NULL) {
         free (vertices);
@@ -60,11 +59,11 @@ PAL_MeshComponent PAL_CreateLatheMesh (static PAL_LatheMeshCreateInfo* info) {
     }
 
     Uint32 index_idx = 0;
-    for (Uint32 i = 0; i < num_points - 1; i++) {
-        for (Uint32 j = 0; j < phi_segments; j++) {
+    for (Uint32 i = 0; i < info->path_length - 1; i++) {
+        for (Uint32 j = 0; j < info->segments; j++) {
             Uint32 a = i * num_phi + j;
-            Uint32 b = i * num_phi + (j + 1) % phi_segments; // Wrap phi
-            Uint32 c = (i + 1) * num_phi + (j + 1) % phi_segments;
+            Uint32 b = i * num_phi + (j + 1) % info->segments; // Wrap phi
+            Uint32 c = (i + 1) * num_phi + (j + 1) % info->segments;
             Uint32 d = (i + 1) * num_phi + j;
 
             // Flipped winding: a -> c -> b and a -> d -> c (counterclockwise if
@@ -85,7 +84,7 @@ PAL_MeshComponent PAL_CreateLatheMesh (static PAL_LatheMeshCreateInfo* info) {
     // Upload to GPU
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
     SDL_GPUBuffer* vbo =
-        PAL_UploadVertices (device, vertices, vertices_size);
+        PAL_UploadVertices (info->device, vertices, vertices_size);
     free (vertices);
     if (vbo == NULL) {
         free (indices);
@@ -94,10 +93,10 @@ PAL_MeshComponent PAL_CreateLatheMesh (static PAL_LatheMeshCreateInfo* info) {
 
     Uint64 indices_size = num_indices * sizeof (Uint32);
     SDL_GPUBuffer* ibo =
-        PAL_UploadIndices (device, indices, indices_size);
+        PAL_UploadIndices (info->device, indices, indices_size);
     free (indices);
     if (ibo == NULL) {
-        SDL_ReleaseGPUBuffer (device, vbo);
+        SDL_ReleaseGPUBuffer (info->device, vbo);
         return NULL;
     }
 

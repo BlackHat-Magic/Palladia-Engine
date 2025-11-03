@@ -5,7 +5,7 @@
 #include <geometry/sphere.h>
 
 PAL_MeshComponent*
-PAL_CreateSphereMesh (static PAL_SphereMeshCreateInfo* info) {
+PAL_CreateSphereMesh (const PAL_SphereMeshCreateInfo* info) {
     if (info->width_segments < 3 || info->height_segments < 2) return NULL;
 
     Uint32 num_points = info->height_segments + 1;
@@ -23,10 +23,15 @@ PAL_CreateSphereMesh (static PAL_SphereMeshCreateInfo* info) {
     }
 
     // lathe returns normals
-    PAL_MeshComponent mesh = PAL_CreateLatheMesh (
-        points, num_points, info->width_segments, info->phi_start,
-        info->phi_length, info->device
-    );
+    PAL_LatheMeshCreateInfo lathe_info = {
+        .path = points,
+        .path_length = num_points,
+        .segments = info->width_segments,
+        .phi_start = info->phi_start,
+        .phi_length = info->phi_length,
+        .device = info->device
+    };
+    PAL_MeshComponent* mesh = PAL_CreateLatheMesh (&lathe_info);
     free (points);
     return mesh;
 }

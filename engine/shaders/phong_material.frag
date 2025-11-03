@@ -26,9 +26,9 @@ layout (std430, set = 2, binding = 2) buffer PointBuffer {
 layout (std140, set = 3, binding = 0) uniform FrameUBO {
     vec4 cam_pos;
     vec4 cam_rot;
-    Uint32 ambient_count;
-    Uint32 point_count;
-    Uint32 pad0; Uint32 pad1; // std140 padding
+    int ambient_count;
+    int point_count;
+    int pad0; int pad1; // std140 padding
 } ubo;
 
 // output color
@@ -43,7 +43,7 @@ void main() {
     vec3 ambient_sum = vec3(0.0);
 
     // ambient lights
-    for (Uint32 i = 0; i < ubo.ambient_count; i++) {
+    for (int i = 0; i < ubo.ambient_count; i++) {
         float intensity = ambients[i].color.a;
         vec3 rgb = ambients[i].color.rgb;
 
@@ -53,7 +53,7 @@ void main() {
     // point lights
     vec3 diffuse_sum = vec3(0.0);
     vec3 specular_sum = vec3(0.0);
-    for (Uint32 i = 0; i < ubo.point_count; i++) {
+    for (int i = 0; i < ubo.point_count; i++) {
         float intensity = points[i].color.a;
         vec3 point_xyz = points[i].position.xyz;
         vec3 light_dir = normalize(point_xyz - FragPos);

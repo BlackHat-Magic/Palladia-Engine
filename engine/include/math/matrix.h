@@ -1,5 +1,7 @@
 #pragma once
 
+#include <SDL3/SDL_stdinc.h>
+
 // Helper macro for mat4 indexing (column-major: m[col*4 + row])
 #define MAT4_IDX(row, col) ((col) * 4 + (row))
 
@@ -64,7 +66,7 @@ void mat4_perspective (
 void mat4_look_at (mat4 m, vec3 eye, vec3 center, vec3 up);
 
 // TODO: move these to a separate file
-void random_seed (unsigned Uint32 seed);
+void random_seed (Uint32 seed);
 float random_float (void);                       // Returns [0, 1)
 float random_float_range (float min, float max); // Returns [min, max)
 Uint32 random_int (Uint32 min, Uint32 max);      // Returns [min, max] inclusive

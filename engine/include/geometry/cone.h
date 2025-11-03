@@ -2,8 +2,6 @@
 
 #include <ecs/ecs.h>
 
-PAL_MeshComponent* PAL_CreateConeMesh (static PAL_ConeMeshCreateInfo* info);
-
 typedef struct {
     float radius;
     float height;
@@ -14,3 +12,5 @@ typedef struct {
     float theta_length;
     SDL_GPUDevice* device;
 } PAL_ConeMeshCreateInfo;
+
+PAL_MeshComponent* PAL_CreateConeMesh (const PAL_ConeMeshCreateInfo* info);

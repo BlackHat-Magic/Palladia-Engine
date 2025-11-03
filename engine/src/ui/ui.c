@@ -10,10 +10,10 @@
 #include <ui/ui.h>
 
 // 0 length for null terminated string
-static Uint32 text_width (mu_Font font, const char* string, Uint32 len) {
+static int text_width (mu_Font font, const char* string, int len) {
     if (font == NULL) return 1;
 
-    Uint32 w = 0, h = 0;
+    int w = 0, h = 0;
     if (!TTF_GetStringSize (font, string, len, &w, &h)) {
         return (float) w;
     }
@@ -21,7 +21,7 @@ static Uint32 text_width (mu_Font font, const char* string, Uint32 len) {
     return 1;
 }
 
-static Uint32 text_height (mu_Font font) {
+static int text_height (mu_Font font) {
     if (font == NULL) return 1;
 
     return TTF_GetFontLineSkip (font);
@@ -58,7 +58,7 @@ void ui_handle_event (SDL_Event* event, UIComponent* ui) {
         break;
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
     case SDL_EVENT_MOUSE_BUTTON_UP:
-        Uint32 button = button_map[event->button.button & 0xff];
+        int button = button_map[event->button.button & 0xff];
         if (button && event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
             mu_input_mousedown (
                 &ui->context, event->button.x, event->button.y, button
@@ -72,7 +72,7 @@ void ui_handle_event (SDL_Event* event, UIComponent* ui) {
         break;
     case SDL_EVENT_KEY_DOWN:
     case SDL_EVENT_KEY_UP:
-        Uint32 key = key_map[event->key.key & 0xff];
+        int key = key_map[event->key.key & 0xff];
         if (key && event->type == SDL_EVENT_KEY_DOWN) {
             mu_input_keydown (&ui->context, key);
         }
@@ -85,8 +85,8 @@ void ui_handle_event (SDL_Event* event, UIComponent* ui) {
 
 UIComponent* create_ui_component (
     const gpu_renderer* renderer,
-    const Uint32 max_rects,
-    const Uint32 max_texts,
+    const int max_rects,
+    const int max_texts,
     const char* font_path,
     const float ptsize
 ) {
@@ -148,7 +148,7 @@ UIComponent* create_ui_component (
 
     // max rects * 4 vertices per rect * 10 floats per vertex * 4(?) bytes per
     // float minimum 4KiB
-    Uint32 vsize = max_rects * 4 * 10 * sizeof (float);
+    int vsize = max_rects * 4 * 10 * sizeof (float);
     vsize = vsize < 4096 ? 4096 : vsize;
     SDL_GPUBufferCreateInfo vinfo = {
         .usage = SDL_GPU_BUFFERUSAGE_VERTEX,
@@ -165,7 +165,7 @@ UIComponent* create_ui_component (
     }
     ui->vbo_size = vsize;
 
-    Uint32 isize = max_rects * 6 * sizeof (Uint32);
+    int isize = max_rects * 6 * sizeof (int);
     isize = isize < 4096 ? 4096 : isize;
     SDL_GPUBufferCreateInfo iinfo = {
         .usage = SDL_GPU_BUFFERUSAGE_INDEX,
@@ -368,7 +368,7 @@ ui_create_text_texture (SDL_GPUDevice* device, SDL_Surface* abgr) {
     return tex;
 }
 
-Uint32 draw_text (
+int draw_text (
     UIComponent* ui,
     SDL_GPUDevice* device,
     const char* utf8,
@@ -399,8 +399,8 @@ Uint32 draw_text (
     }
 
     SDL_GPUTexture* tex = ui_create_text_texture (device, abgr);
-    Uint32 w = abgr->w;
-    Uint32 h = abgr->h;
+    int w = abgr->w;
+    int h = abgr->h;
     SDL_DestroySurface (abgr);
     if (!tex) return 0;
 

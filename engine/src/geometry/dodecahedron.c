@@ -6,7 +6,7 @@
 #include <math/matrix.h>
 
 PAL_MeshComponent*
-PAL_CreateDodecahedronMesh (static PAL_PlatonicMeshCreateInfo* info) {
+PAL_CreateDodecahedronMesh (const PAL_PlatonicMeshCreateInfo* info) {
     float phi = (1.0f + sqrtf (5.0f)) / 2.0f;
     float phi_inv = 1.0f / phi;
 

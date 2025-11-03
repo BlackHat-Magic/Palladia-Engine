@@ -6,4 +6,4 @@
 #define PAL_TetrahedronMeshCreateInfo PAL_PlatonicMeshCreateInfo
 
 PAL_MeshComponent*
-PAL_CreateTetrahedronMesh (static PAL_TetrahedronMeshCreateInfo* info);
+PAL_CreateTetrahedronMesh (const PAL_TetrahedronMeshCreateInfo* info);

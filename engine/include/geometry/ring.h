@@ -2,8 +2,6 @@
 
 #include <ecs/ecs.h>
 
-PAL_MeshComponent* PAL_CreateRingMesh (static PAL_RingMeshCreateInfo* info);
-
 typedef struct {
     float inner_radius;
     float outer_radius;
@@ -12,4 +10,6 @@ typedef struct {
     float theta_start;
     float theta_length;
     SDL_GPUDevice* device;
-} PAL_RingMeshCreateInfo
+} PAL_RingMeshCreateInfo;
+
+PAL_MeshComponent* PAL_CreateRingMesh (const PAL_RingMeshCreateInfo* info);

@@ -4,7 +4,7 @@
 #include <geometry/lathe.h>
 
 PAL_MeshComponent*
-PAL_CreateCylinderMesh (static PAL_CylinderMeshCreateInfo* info) {
+PAL_CreateCylinderMesh (const PAL_CylinderMeshCreateInfo* info) {
     if (info->radial_segments < 3 || info->height_segments < 1) return NULL;
 
     // Calculate num_points: sides (info->height_segments + 1) + optional 2
@@ -43,10 +43,15 @@ PAL_CreateCylinderMesh (static PAL_CylinderMeshCreateInfo* info) {
         points[idx++] = (vec2) {0.0f, half_height};
     }
 
-    mesh = PAL_CreateLatheMesh (
-        points, idx, info->radial_segments, info->theta_start,
-        info->theta_length, info->device
-    );
+    PAL_LatheMeshCreateInfo lathe_info = {
+        .path = points,
+        .path_length = idx,
+        .segments = info->radial_segments,
+        .phi_start = info->theta_start,
+        .phi_length = info->theta_length,
+        .device = info->device
+    };
+    PAL_MeshComponent* mesh = PAL_CreateLatheMesh (&lathe_info);
     free (points);
     return mesh;
 }

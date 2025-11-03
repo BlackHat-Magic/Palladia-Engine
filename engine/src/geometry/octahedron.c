@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <math.h>
 
 #include <ecs/ecs.h>
@@ -5,7 +6,7 @@
 #include <math/matrix.h>
 
 PAL_MeshComponent*
-PAL_CreateOctahedronMesh (static PAL_OctahedronMeshCreateInfo* info) {
+PAL_CreateOctahedronMesh (const PAL_OctahedronMeshCreateInfo* info) {
     const Uint32 num_vertices = 6;
     float vertices[6 * 8] = {0};
     vec3 pos[6] = {

@@ -3,10 +3,12 @@
 
 #include <ecs/ecs.h>
 #include <geometry/lathe.h>
+#include <geometry/capsule.h>
 
 PAL_MeshComponent*
-PAL_CreateCapsuleMesh (static PAL_CapsuleMeshCreateInfo* info) {
-    if (info->cap_segments < 1) info->cap_segments = 1;
+PAL_CreateCapsuleMesh (const PAL_CapsuleMeshCreateInfo* info) {
+    Uint32 cap_segments = info->cap_segments;
+    if (cap_segments < 1) cap_segments = 1;
 
     Uint32 num_points = (info->cap_segments + 1) * 2;
     if (info->height <= 0.0f) num_points -= 1;
@@ -36,15 +38,15 @@ PAL_CreateCapsuleMesh (static PAL_CapsuleMeshCreateInfo* info) {
         }
     }
 
-    PAL_LatheMeshCreateInfo = {
+    PAL_LatheMeshCreateInfo lathe_info = {
         .path = points,
         .path_length = num_points,
-        .segmenst = info->radial_segments,
+        .segments = info->radial_segments,
         .phi_start = 0.0f,
         .phi_length = (float) M_PI * 2.0f,
         .device = info->device
     };
-    PAL_MeshComponent* mesh = PAL_CreateLatheMesh (&PAL_LatheMeshCreateInfo);
+    PAL_MeshComponent* mesh = PAL_CreateLatheMesh (&lathe_info);
     free (points);
     if (mesh == NULL) return NULL;
     return mesh;

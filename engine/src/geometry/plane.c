@@ -3,13 +3,15 @@
 #include <geometry/g_common.h>
 #include <geometry/plane.h>
 
-PAL_MeshComponent* PAL_CreatePlaneMesh (static PAL_PlaneMeshCreateInfo* info) {
-    if (info->width_segments < 1) info->width_segments = 1;
-    if (info->height_segments < 1) info->height_segments = 1;
+PAL_MeshComponent* PAL_CreatePlaneMesh (const PAL_PlaneMeshCreateInfo* info) {
+    Uint32 width_segments = info->width_segments;
+    Uint32 height_segments = info->height_segments;
+    if (width_segments < 1) width_segments = 1;
+    if (height_segments < 1) height_segments = 1;
 
     Uint32 num_vertices =
-        (info->width_segments + 1) * (info->height_segments + 1);
-    Uint32 num_indices = info->width_segments * info->height_segments * 6;
+        (width_segments + 1) * (height_segments + 1);
+    Uint32 num_indices = width_segments * height_segments * 6;
 
     float* vertices = (float*) malloc (
         num_vertices * 8 * sizeof (float)
@@ -26,11 +28,11 @@ PAL_MeshComponent* PAL_CreatePlaneMesh (static PAL_PlaneMeshCreateInfo* info) {
     float half_width = info->width / 2.0f;
     float half_height = info->height / 2.0f;
     Uint32 vertex_idx = 0;
-    for (Uint32 iy = 0; iy <= info->height_segments; iy++) {
-        float v = (float) iy / (float) info->height_segments;
+    for (Uint32 iy = 0; iy <= height_segments; iy++) {
+        float v = (float) iy / (float) height_segments;
         float y_pos = -half_height + (info->height * v); // Y increases upward
-        for (Uint32 ix = 0; ix <= info->width_segments; ix++) {
-            float u = (float) ix / (float) info->width_segments;
+        for (Uint32 ix = 0; ix <= width_segments; ix++) {
+            float u = (float) ix / (float) width_segments;
             float x_pos = -half_width + (info->width * u);
 
             vertices[vertex_idx++] = x_pos;
@@ -47,12 +49,12 @@ PAL_MeshComponent* PAL_CreatePlaneMesh (static PAL_PlaneMeshCreateInfo* info) {
 
     // Generate indices (two triangles per grid cell, clockwise)
     Uint32 index_idx = 0;
-    for (Uint32 iy = 0; iy < info->height_segments; iy++) {
-        for (Uint32 ix = 0; ix < info->width_segments; ix++) {
-            Uint32 a = iy * (info->width_segments + 1) + ix;
-            Uint32 b = iy * (info->width_segments + 1) + ix + 1;
-            Uint32 c = (iy + 1) * (info->width_segments + 1) + ix + 1;
-            Uint32 d = (iy + 1) * (info->width_segments + 1) + ix;
+    for (Uint32 iy = 0; iy < height_segments; iy++) {
+        for (Uint32 ix = 0; ix < width_segments; ix++) {
+            Uint32 a = iy * (width_segments + 1) + ix;
+            Uint32 b = iy * (width_segments + 1) + ix + 1;
+            Uint32 c = (iy + 1) * (width_segments + 1) + ix + 1;
+            Uint32 d = (iy + 1) * (width_segments + 1) + ix;
 
             // Triangle 1: a -> b -> c (clockwise)
             indices[index_idx++] = a;
