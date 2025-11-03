@@ -4,59 +4,40 @@
 #include <geometry/g_common.h>
 #include <geometry/ring.h>
 
-PAL_MeshComponent create_ring_mesh (
-    float inner_radius,
-    float outer_radius,
-    Uint32 theta_segments,
-    Uint32 phi_segments,
-    float theta_start,
-    float theta_length,
-    SDL_GPUDevice* device
-) {
-    PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
-    if (theta_segments < 3) {
-        SDL_Log ("Ring must have at least 3 theta segments");
-        return null_mesh;
-    }
-    if (phi_segments < 1) {
-        SDL_Log ("Ring must have at least 1 phi segment");
-        return null_mesh;
-    }
-    if (inner_radius >= outer_radius) {
-        SDL_Log ("Inner radius must be less than outer radius");
-        return null_mesh;
-    }
+PAL_MeshComponent* PAL_CreateRingMesh (static PAL_RingMeshCreateInfo* info) {
+    if (info->theta_segments < 3) return NULL;
+    if (info->phi_segments < 1) return NULL;
+    if (info->inner_radius >= info->outer_radius) return NULL;
 
-    Uint32 num_theta = theta_segments + 1;
-    Uint32 num_phi = phi_segments + 1;
+    Uint32 num_theta = info->theta_segments + 1;
+    Uint32 num_phi = info->phi_segments + 1;
     Uint32 num_vertices = num_theta * num_phi;
 
     float* vertices = (float*) malloc (
         num_vertices * 8 * sizeof (float)
     ); // pos.x,y,z + uv.u,v
-    if (!vertices) {
-        SDL_Log ("Failed to allocate vertices for ring mesh");
-        return null_mesh;
-    }
+    if (vertices == NULL) return NULL;
 
     Uint32 vertex_idx = 0;
     for (Uint32 i = 0; i < num_theta; i++) {
-        float theta_frac = (float) i / (float) theta_segments;
-        float theta = theta_start + theta_frac * theta_length;
+        float theta_frac = (float) i / (float) info->theta_segments;
+        float theta = info->theta_start + theta_frac * info->theta_length;
         float cos_theta = cosf (theta);
         float sin_theta = sinf (theta);
 
         for (Uint32 j = 0; j < num_phi; j++) {
-            float phi_frac = (float) j / (float) phi_segments;
-            float radius =
-                inner_radius + phi_frac * (outer_radius - inner_radius);
+            float phi_frac = (float) j / (float) info->phi_segments;
+            float radius = info->inner_radius +
+                           phi_frac * (info->outer_radius - info->inner_radius);
 
             float x = radius * cos_theta;
             float y = radius * sin_theta;
             float z = 0.0f;
 
-            float uv_x = (cos_theta * (radius / outer_radius) + 1.0f) * 0.5f;
-            float uv_y = (sin_theta * (radius / outer_radius) + 1.0f) * 0.5f;
+            float uv_x =
+                (cos_theta * (radius / info->outer_radius) + 1.0f) * 0.5f;
+            float uv_y =
+                (sin_theta * (radius / info->outer_radius) + 1.0f) * 0.5f;
 
             vertices[vertex_idx++] = x;
             vertices[vertex_idx++] = y;
@@ -69,17 +50,16 @@ PAL_MeshComponent create_ring_mesh (
         }
     }
 
-    Uint32 num_indices = theta_segments * phi_segments * 6;
+    Uint32 num_indices = info->theta_segments * info->phi_segments * 6;
     Uint32* indices = (Uint32*) malloc (num_indices * sizeof (Uint32));
-    if (!indices) {
-        SDL_Log ("Failed to allocate indices for ring mesh");
+    if (indices == NULL) {
         free (vertices);
-        return null_mesh;
+        return NULL;
     }
 
     Uint32 index_idx = 0;
-    for (Uint32 i = 0; i < theta_segments; i++) {
-        for (Uint32 j = 0; j < phi_segments; j++) {
+    for (Uint32 i = 0; i < info->theta_segments; i++) {
+        for (Uint32 j = 0; j < info->phi_segments; j++) {
             Uint32 a = i * num_phi + j;
             Uint32 b = i * num_phi + j + 1;
             Uint32 c = (i + 1) * num_phi + j + 1;
@@ -97,31 +77,35 @@ PAL_MeshComponent create_ring_mesh (
     }
 
     // Upload to GPU
-    SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
-    Uint32 vbo_failed =
-        PAL_UploadVertices (device, vertices, vertices_size, &vbo);
+    SDL_GPUBuffer* vbo =
+        PAL_UploadVertices (info->device, vertices, vertices_size, &vbo);
     free (vertices);
-    if (vbo_failed) {
+    if (vbo == NULL) {
         free (indices);
-        return null_mesh; // Logging handled in PAL_UploadVertices
+        return NULL;
     }
 
-    SDL_GPUBuffer* ibo = NULL;
     Uint64 indices_size = num_indices * sizeof (Uint32);
-    Uint32 ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
+    SDL_GPUBuffer* ibo =
+        PAL_UploadIndices (info->device, indices, indices_size, &ibo);
     free (indices);
-    if (ibo_failed) {
-        SDL_ReleaseGPUBuffer (device, vbo);
-        return null_mesh; // Logging handled in PAL_UploadIndices
+    if (ibo == NULL) {
+        SDL_ReleaseGPUBuffer (info->device, vbo);
+        return NULL;
     }
 
-    PAL_MeshComponent out_mesh =
-        (PAL_MeshComponent) {.vertex_buffer = vbo,
-                             .num_vertices = num_vertices,
-                             .index_buffer = ibo,
-                             .num_indices = num_indices,
-                             .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
+    PAL_MeshComponent* mesh = malloc (sizeof (PAL_MeshComponent));
+    if (mesh == NULL) {
+        SDL_ReleaseGPUBuffer (info->device, vbo);
+        SDL_ReleaseGPUBuffer (info->device, ibo);
+        return NULL;
+    }
+    *mesh = (PAL_MeshComponent) {.vertex_buffer = vbo,
+                                 .num_vertices = num_vertices,
+                                 .index_buffer = ibo,
+                                 .num_indices = num_indices,
+                                 .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
 
-    return out_mesh;
+    return mesh;
 }

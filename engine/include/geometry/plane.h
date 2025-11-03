@@ -2,7 +2,7 @@
 
 #include <ecs/ecs.h>
 
-PAL_MeshComponent PAL_CreatePlaneMesh (static PAL_PlaneMeshCreateInfo* info);
+PAL_MeshComponent* PAL_CreatePlaneMesh (static PAL_PlaneMeshCreateInfo* info);
 
 typedef struct {
     float width;

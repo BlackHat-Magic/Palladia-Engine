@@ -225,10 +225,18 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
     state->meshes[GEO_PLANE] = PAL_CreatePlaneMesh (&plane_info);
     if (state->meshes[GEO_PLANE] == NULL) return SDL_APP_FAILURE;
 
-    state->meshes[GEO_RING] = create_ring_mesh (
-        0.25f, 0.5f, 16, 16, 0.0f, 2.0 * (float) M_PI, state->renderer->device
-    );
-    if (state->meshes[GEO_RING].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    // ring
+    PAL_RingMeshCreateInfo ring_info = {
+        .inner_radius = 0.25f,
+        .outer_radius = 0.5f,
+        .theta_segments = 16,
+        .phi_segments = 16,
+        .theta_start = 0.0f,
+        .theta_length = 2.0 * (float) M_PI,
+        .device = state->renderer->device
+    };
+    state->meshes[GEO_RING] = PAL_CreateRingMesh (&ring_info);
+    if (state->meshes[GEO_RING] == NULL) return SDL_APP_FAILURE;
 
     // tetrahedron
     PAL_TetrahedronMeshCreateInfo tetrahedron_info = {

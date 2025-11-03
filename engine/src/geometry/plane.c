@@ -3,7 +3,7 @@
 #include <geometry/g_common.h>
 #include <geometry/plane.h>
 
-PAL_MeshComponent PAL_CreatePlaneMesh (static PAL_PlaneMeshCreateInfo* info) {
+PAL_MeshComponent* PAL_CreatePlaneMesh (static PAL_PlaneMeshCreateInfo* info) {
     if (info->width_segments < 1) info->width_segments = 1;
     if (info->height_segments < 1) info->height_segments = 1;
 
