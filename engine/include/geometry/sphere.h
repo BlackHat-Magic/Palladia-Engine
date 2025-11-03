@@ -4,8 +4,8 @@
 
 PAL_MeshComponent create_sphere_mesh (
     float radius,
-    int width_segments,
-    int height_segments,
+    Uint32 width_segments,
+    Uint32 height_segments,
     float phi_start,
     float phi_length,
     float theta_start,

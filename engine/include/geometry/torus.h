@@ -5,8 +5,8 @@
 PAL_MeshComponent create_torus_mesh (
     float radius,
     float tube_radius,
-    int radial_segments,
-    int tubular_segments,
+    Uint32 radial_segments,
+    Uint32 tubular_segments,
     float arc,
     SDL_GPUDevice* device
 );

@@ -10,10 +10,10 @@
 #include <ui/ui.h>
 
 // 0 length for null terminated string
-static int text_width (mu_Font font, const char* string, int len) {
+static Uint32 text_width (mu_Font font, const char* string, Uint32 len) {
     if (font == NULL) return 1;
 
-    int w = 0, h = 0;
+    Uint32 w = 0, h = 0;
     if (!TTF_GetStringSize (font, string, len, &w, &h)) {
         return (float) w;
     }
@@ -21,7 +21,7 @@ static int text_width (mu_Font font, const char* string, int len) {
     return 1;
 }
 
-static int text_height (mu_Font font) {
+static Uint32 text_height (mu_Font font) {
     if (font == NULL) return 1;
 
     return TTF_GetFontLineSkip (font);
@@ -368,7 +368,7 @@ ui_create_text_texture (SDL_GPUDevice* device, SDL_Surface* abgr) {
     return tex;
 }
 
-int draw_text (
+Uint32 draw_text (
     UIComponent* ui,
     SDL_GPUDevice* device,
     const char* utf8,
@@ -399,8 +399,8 @@ int draw_text (
     }
 
     SDL_GPUTexture* tex = ui_create_text_texture (device, abgr);
-    int w = abgr->w;
-    int h = abgr->h;
+    Uint32 w = abgr->w;
+    Uint32 h = abgr->h;
     SDL_DestroySurface (abgr);
     if (!tex) return 0;
 

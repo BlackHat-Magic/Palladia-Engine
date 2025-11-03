@@ -25,7 +25,7 @@ void draw_rectangle (
     const float a
 );
 
-int draw_text (
+Uint32 draw_text (
     UIComponent* ui,
     SDL_GPUDevice* device,
     const char* utf8,

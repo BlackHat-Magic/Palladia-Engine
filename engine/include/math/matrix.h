@@ -64,10 +64,10 @@ void mat4_perspective (
 void mat4_look_at (mat4 m, vec3 eye, vec3 center, vec3 up);
 
 // TODO: move these to a separate file
-void random_seed (unsigned int seed);
+void random_seed (unsigned Uint32 seed);
 float random_float (void);                       // Returns [0, 1)
 float random_float_range (float min, float max); // Returns [min, max)
-int random_int (int min, int max);               // Returns [min, max] inclusive
+Uint32 random_int (Uint32 min, Uint32 max);      // Returns [min, max] inclusive
 bool random_bool (void); // Returns true/false with 50% probability
 vec2 random_vec2 (void); // Each component [0, 1)
 vec3 random_vec3 (void); // Each component [0, 1)

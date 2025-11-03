@@ -6,8 +6,8 @@
 
 PAL_MeshComponent create_sphere_mesh (
     float radius,
-    int width_segments,
-    int height_segments,
+    Uint32 width_segments,
+    Uint32 height_segments,
     float phi_start,
     float phi_length,
     float theta_start,
@@ -22,14 +22,14 @@ PAL_MeshComponent create_sphere_mesh (
         return null_mesh;
     }
 
-    int num_points = height_segments + 1;
+    Uint32 num_points = height_segments + 1;
     vec2* points = (vec2*) malloc (num_points * sizeof (vec2));
     if (!points) {
         SDL_Log ("Failed to allocate points for sphere path");
         return null_mesh;
     }
 
-    for (int i = 0; i < num_points; i++) {
+    for (Uint32 i = 0; i < num_points; i++) {
         float frac = (float) i / (float) height_segments;
         float theta =
             theta_start +

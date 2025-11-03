@@ -70,11 +70,11 @@ typedef struct {
     SDL_GPUTexture* white_texture;
 } AppState;
 
-static int uint8_slider (mu_Context* ctx, Uint8* value, int low, int high) {
+static Uint32 uint8_slider (mu_Context* ctx, Uint8* value, Uint32 low, Uint32 high) {
     static float tmp;
     mu_push_id (ctx, &value, sizeof (value));
     tmp = *value;
-    int res = mu_slider_ex (ctx, &tmp, low, high, 0, "%.0f", MU_OPT_ALIGNCENTER);
+    Uint32 res = mu_slider_ex (ctx, &tmp, low, high, 0, "%.0f", MU_OPT_ALIGNCENTER);
     *value = tmp;
     mu_pop_id (ctx);
     return res;
@@ -124,7 +124,7 @@ SDL_AppResult SDL_AppEvent (void* appstate, SDL_Event* event) {
     return SDL_APP_CONTINUE;
 }
 
-SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
+SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
     SDL_SetAppMetadata (
         "Asmadi Engine Box Geometry", "0.1.0", "xyz.lukeh.Asmadi-Engine"
     );
@@ -206,7 +206,7 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     state->entity = create_entity ();
 
     // circle mesh
-    state->meshes[GEO_CIRCLE] = create_circle_mesh (0.5f, 16, state->renderer->device);
+    state->meshes[GEO_CIRCLE] = PAL_CreateCircleMesh (0.5f, 16, state->renderer->device);
     if (state->meshes[GEO_CIRCLE].vertex_buffer == NULL) return SDL_APP_FAILURE;
     state->meshes[GEO_PLANE] = create_plane_mesh (1.0f, 1.0f, 1, 1, state->renderer->device);
     if (state->meshes[GEO_PLANE].vertex_buffer == NULL) return SDL_APP_FAILURE;
@@ -333,7 +333,7 @@ SDL_AppResult SDL_AppIterate (void* appstate) {
     mu_begin (&ui->context);
     if (state->settings) {
         if (mu_begin_window (&ui->context, "Test Window", mu_rect (250, 250, 300, 240))) {
-            mu_layout_row (&ui->context, 1, (int[]){80}, 0);
+            mu_layout_row (&ui->context, 1, (Uint32[]){80}, 0);
             mu_label (&ui->context, "Test label");
             uint8_slider (&ui->context, &state->test, 0, 255);
             mu_end_window (&ui->context);

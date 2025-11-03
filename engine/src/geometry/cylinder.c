@@ -7,8 +7,8 @@ PAL_MeshComponent create_cylinder_mesh (
     float radius_top,
     float radius_bottom,
     float height,
-    int radial_segments,
-    int height_segments,
+    Uint32 radial_segments,
+    Uint32 height_segments,
     bool open_ended,
     float theta_start,
     float theta_length,
@@ -23,7 +23,7 @@ PAL_MeshComponent create_cylinder_mesh (
     }
 
     // Calculate num_points: sides (height_segments + 1) + optional 2 centers
-    int num_points = height_segments + 1;
+    Uint32 num_points = height_segments + 1;
     if (!open_ended) num_points += 2;
 
     vec2* points = (vec2*) malloc (num_points * sizeof (vec2));
@@ -32,7 +32,7 @@ PAL_MeshComponent create_cylinder_mesh (
         return (PAL_MeshComponent) {0};
     }
 
-    int idx = 0;
+    Uint32 idx = 0;
     float half_height = height / 2.0f;
 
     // Bottom center (if closed)
@@ -44,7 +44,7 @@ PAL_MeshComponent create_cylinder_mesh (
     points[idx++] = (vec2) {radius_bottom, -half_height};
 
     // Intermediate side points (if height_segments > 1)
-    for (int i = 1; i < height_segments; i++) {
+    for (Uint32 i = 1; i < height_segments; i++) {
         float frac = (float) i / (float) height_segments;
         points[idx++] =
             (vec2) {radius_bottom + frac * (radius_top - radius_bottom),

@@ -8,7 +8,7 @@
 PAL_MeshComponent
 create_icosahedron_mesh (float radius, SDL_GPUDevice* device) {
     PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
-    const int num_vertices = 12;
+    const Uint32 num_vertices = 12;
     float* vertices = (float*) malloc (num_vertices * 8 * sizeof (float));
     if (!vertices) {
         SDL_Log ("Failed to allocate vertices for icosahedron mesh");
@@ -31,8 +31,8 @@ create_icosahedron_mesh (float radius, SDL_GPUDevice* device) {
         {-t, 0.0f, 1.0f}   // 11
     };
 
-    int vertex_idx = 0;
-    for (int i = 0; i < 12; i++) {
+    Uint32 vertex_idx = 0;
+    for (Uint32 i = 0; i < 12; i++) {
         pos[i] = vec3_normalize (pos[i]);
         pos[i] = vec3_scale (pos[i], radius);
         vertices[vertex_idx++] = pos[i].x;
@@ -75,13 +75,14 @@ create_icosahedron_mesh (float radius, SDL_GPUDevice* device) {
 
     SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
-    int vbo_failed = PAL_UploadVertices (device, vertices, vertices_size, &vbo);
+    Uint32 vbo_failed =
+        PAL_UploadVertices (device, vertices, vertices_size, &vbo);
     free (vertices);
     if (vbo_failed) return null_mesh;
 
     SDL_GPUBuffer* ibo = NULL;
     Uint64 indices_size = 60 * sizeof (Uint32);
-    int ibo_failed =
+    Uint32 ibo_failed =
         PAL_UploadIndices (device, standard_indices, indices_size, &ibo);
     if (ibo_failed) {
         SDL_ReleaseGPUBuffer (device, vbo);

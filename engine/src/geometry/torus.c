@@ -8,8 +8,8 @@
 PAL_MeshComponent create_torus_mesh (
     float radius,
     float tube_radius,
-    int radial_segments,
-    int tubular_segments,
+    Uint32 radial_segments,
+    Uint32 tubular_segments,
     float arc,
     SDL_GPUDevice* device
 ) {
@@ -28,10 +28,10 @@ PAL_MeshComponent create_torus_mesh (
     }
 
     bool is_closed = fabsf (arc - 2.0f * (float) M_PI) < 1e-6f;
-    int num_tubular = tubular_segments + (is_closed ? 0 : 1);
-    int num_radial = radial_segments; // Always closed in radial direction
+    Uint32 num_tubular = tubular_segments + (is_closed ? 0 : 1);
+    Uint32 num_radial = radial_segments; // Always closed in radial direction
 
-    int num_vertices = num_tubular * num_radial;
+    Uint32 num_vertices = num_tubular * num_radial;
 
     float* vertices = (float*) malloc (
         num_vertices * 8 * sizeof (float)
@@ -41,13 +41,13 @@ PAL_MeshComponent create_torus_mesh (
         return null_mesh;
     }
 
-    int vertex_idx = 0;
-    for (int tu = 0; tu < num_tubular; tu++) {
+    Uint32 vertex_idx = 0;
+    for (Uint32 tu = 0; tu < num_tubular; tu++) {
         float u = ((float) tu / (float) tubular_segments) * arc;
         float cos_u = cosf (u);
         float sin_u = sinf (u);
 
-        for (int ra = 0; ra < num_radial; ra++) {
+        for (Uint32 ra = 0; ra < num_radial; ra++) {
             float v =
                 ((float) ra / (float) radial_segments) * 2.0f * (float) M_PI;
             float cos_v = cosf (v);
@@ -80,9 +80,9 @@ PAL_MeshComponent create_torus_mesh (
         }
     }
 
-    int num_u_loops = tubular_segments;
-    int num_r_loops = radial_segments;
-    int num_indices = num_u_loops * num_r_loops * 6;
+    Uint32 num_u_loops = tubular_segments;
+    Uint32 num_r_loops = radial_segments;
+    Uint32 num_indices = num_u_loops * num_r_loops * 6;
     Uint32* indices = (Uint32*) malloc (num_indices * sizeof (Uint32));
     if (!indices) {
         SDL_Log ("Failed to allocate indices for torus mesh");
@@ -90,15 +90,15 @@ PAL_MeshComponent create_torus_mesh (
         return null_mesh;
     }
 
-    int index_idx = 0;
-    for (int tu = 0; tu < num_u_loops; tu++) {
-        int tu1 = tu + 1;
+    Uint32 index_idx = 0;
+    for (Uint32 tu = 0; tu < num_u_loops; tu++) {
+        Uint32 tu1 = tu + 1;
         if (is_closed) {
             tu1 %= tubular_segments;
         }
 
-        for (int ra = 0; ra < num_r_loops; ra++) {
-            int ra1 = (ra + 1) % radial_segments;
+        for (Uint32 ra = 0; ra < num_r_loops; ra++) {
+            Uint32 ra1 = (ra + 1) % radial_segments;
 
             Uint32 a = (Uint32) (tu * num_radial + ra);
             Uint32 b = (Uint32) (tu1 * num_radial + ra);

@@ -3,11 +3,6 @@
 #include <geometry/g_common.h>
 
 PAL_MeshComponent* PAL_CreateBoxMesh (PAL_BoxMeshCreateInfo* info) {
-    PAL_MeshComponent out_mesh = malloc (sizeof (PAL_MeshComponent));
-    if (PAL_MeshComponent == NULL) {
-        return NULL;
-    }
-
     float wx = info->w / 2.0f;
     float hy = info->h / 2.0f;
     float lz = info->l / 2.0f;
@@ -75,11 +70,19 @@ PAL_MeshComponent* PAL_CreateBoxMesh (PAL_BoxMeshCreateInfo* info) {
         return NULL; // caller handles logging
     }
 
-    out_mesh->vertex_buffer = vbo;
-    out_mesh->num_vertices = 24;
-    out_mesh->index_buffer = ibo;
-    out_mesh->num_indices = 36;
-    out_mesh->index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT;
+    PAL_MeshComponent* mesh = malloc (sizeof (PAL_MeshComponent));
+    if (mesh == NULL) {
+        SDL_ReleaseGPUBuffer (info->device, vbo);
+        SDL_ReleaseGPUBuffer (info->device, ibo);
+        return NULL;
+    }
+    *mesh = (PAL_MeshComponent) {
+        .vertex_buffer = vbo,
+        .num_vertices = 24,
+        .index_buffer = ibo,
+        .num_indices = 36,
+        .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT,
+    };
 
-    return out_mesh;
+    return mesh;
 }

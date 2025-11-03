@@ -5,7 +5,7 @@
 PAL_MeshComponent create_plane_mesh (
     float width,
     float height,
-    int width_segments,
-    int height_segments,
+    Uint32 width_segments,
+    Uint32 height_segments,
     SDL_GPUDevice* device
 );

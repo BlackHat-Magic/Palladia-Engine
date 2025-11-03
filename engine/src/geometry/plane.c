@@ -6,16 +6,16 @@
 PAL_MeshComponent create_plane_mesh (
     float width,
     float height,
-    int width_segments,
-    int height_segments,
+    Uint32 width_segments,
+    Uint32 height_segments,
     SDL_GPUDevice* device
 ) {
     PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
     if (width_segments < 1) width_segments = 1;
     if (height_segments < 1) height_segments = 1;
 
-    int num_vertices = (width_segments + 1) * (height_segments + 1);
-    int num_indices = width_segments * height_segments * 6;
+    Uint32 num_vertices = (width_segments + 1) * (height_segments + 1);
+    Uint32 num_indices = width_segments * height_segments * 6;
 
     float* vertices = (float*) malloc (
         num_vertices * 8 * sizeof (float)
@@ -35,11 +35,11 @@ PAL_MeshComponent create_plane_mesh (
     // Generate vertices (grid in XY, Z=0)
     float half_width = width / 2.0f;
     float half_height = height / 2.0f;
-    int vertex_idx = 0;
-    for (int iy = 0; iy <= height_segments; iy++) {
+    Uint32 vertex_idx = 0;
+    for (Uint32 iy = 0; iy <= height_segments; iy++) {
         float v = (float) iy / (float) height_segments;
         float y_pos = -half_height + (height * v); // Y increases upward
-        for (int ix = 0; ix <= width_segments; ix++) {
+        for (Uint32 ix = 0; ix <= width_segments; ix++) {
             float u = (float) ix / (float) width_segments;
             float x_pos = -half_width + (width * u);
 
@@ -56,9 +56,9 @@ PAL_MeshComponent create_plane_mesh (
     }
 
     // Generate indices (two triangles per grid cell, clockwise)
-    int index_idx = 0;
-    for (int iy = 0; iy < height_segments; iy++) {
-        for (int ix = 0; ix < width_segments; ix++) {
+    Uint32 index_idx = 0;
+    for (Uint32 iy = 0; iy < height_segments; iy++) {
+        for (Uint32 ix = 0; ix < width_segments; ix++) {
             Uint32 a = (Uint32) (iy * (width_segments + 1) + ix);
             Uint32 b = (Uint32) (iy * (width_segments + 1) + ix + 1);
             Uint32 c = (Uint32) ((iy + 1) * (width_segments + 1) + ix + 1);
@@ -78,7 +78,8 @@ PAL_MeshComponent create_plane_mesh (
 
     SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
-    int vbo_failed = PAL_UploadVertices (device, vertices, vertices_size, &vbo);
+    Uint32 vbo_failed =
+        PAL_UploadVertices (device, vertices, vertices_size, &vbo);
     free (vertices);
     if (vbo_failed) {
         free (indices);
@@ -87,7 +88,7 @@ PAL_MeshComponent create_plane_mesh (
 
     SDL_GPUBuffer* ibo = NULL;
     Uint64 indices_size = num_indices * sizeof (Uint32);
-    int ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
+    Uint32 ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
     free (indices);
     if (ibo_failed) {
         return null_mesh; // logging handled in PAL_UploadIndices()

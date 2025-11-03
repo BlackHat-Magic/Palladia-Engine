@@ -103,7 +103,11 @@ PAL_MeshComponent PAL_CreateLatheMesh (static PAL_LatheMeshCreateInfo* info) {
     }
 
     PAL_MeshComponent* mesh = malloc (sizeof (PAL_MeshComponent));
-    if (mesh == NULL) return NULL;
+    if (mesh == NULL) {
+        SDL_ReleaseGPUBuffer (info->device, vbo);
+        SDL_ReleaseGPUBuffer (info->device, ibo);
+        return NULL;
+    }
     *mesh = (PAL_MeshComponent) {.vertex_buffer = vbo,
                                  .num_vertices = num_vertices,
                                  .index_buffer = ibo,

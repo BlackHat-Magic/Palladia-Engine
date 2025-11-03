@@ -7,7 +7,7 @@ PAL_MeshComponent
 create_tetrahedron_mesh (float radius, SDL_GPUDevice* device) {
     PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
     // 4 vertices (positions + normals + UVs; simple UV projection for demo)
-    const int num_vertices = 4;
+    const Uint32 num_vertices = 4;
     float vertices[4 * 8] = {
         1.0f,  1.0f,  1.0f,  0.0f, 0.0f, 0.0f, 0.5f, 0.5f, // Vert 0
         1.0f,  -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, // Vert 1
@@ -16,7 +16,7 @@ create_tetrahedron_mesh (float radius, SDL_GPUDevice* device) {
     };
 
     // Normalize and scale positions (normals placeholder)
-    for (int i = 0; i < num_vertices; i++) {
+    for (Uint32 i = 0; i < num_vertices; i++) {
         vec3 pos = {vertices[i * 8], vertices[i * 8 + 1], vertices[i * 8 + 2]};
         pos = vec3_normalize (pos);
         pos = vec3_scale (pos, radius);
@@ -36,7 +36,7 @@ create_tetrahedron_mesh (float radius, SDL_GPUDevice* device) {
     }
 
     // 12 indices (4 triangles, clockwise)
-    const int num_indices = 12;
+    const Uint32 num_indices = 12;
     Uint32 indices[] = {
         0, 1, 2, // Face 0
         0, 3, 1, // Face 1
@@ -49,12 +49,13 @@ create_tetrahedron_mesh (float radius, SDL_GPUDevice* device) {
 
     SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
-    int vbo_failed = PAL_UploadVertices (device, vertices, vertices_size, &vbo);
+    Uint32 vbo_failed =
+        PAL_UploadVertices (device, vertices, vertices_size, &vbo);
     if (vbo_failed) return null_mesh;
 
     SDL_GPUBuffer* ibo = NULL;
     Uint64 indices_size = num_indices * sizeof (Uint32);
-    int ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
+    Uint32 ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
     if (ibo_failed) {
         SDL_ReleaseGPUBuffer (device, vbo);
         return null_mesh;

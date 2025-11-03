@@ -7,7 +7,7 @@
 
 PAL_MeshComponent create_octahedron_mesh (float radius, SDL_GPUDevice* device) {
     PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
-    const int num_vertices = 6;
+    const Uint32 num_vertices = 6;
     float vertices[6 * 8] = {0};
     vec3 pos[6] = {
         {0.0f, 1.0f, 0.0f},  // 0: north pole
@@ -18,7 +18,7 @@ PAL_MeshComponent create_octahedron_mesh (float radius, SDL_GPUDevice* device) {
         {0.0f, -1.0f, 0.0f}  // 5: south pole
     };
 
-    for (int i = 0; i < 6; i++) {
+    for (Uint32 i = 0; i < 6; i++) {
         pos[i] = vec3_normalize (pos[i]);
         pos[i] = vec3_scale (pos[i], radius);
         vertices[i * 8 + 0] = pos[i].x;
@@ -47,12 +47,13 @@ PAL_MeshComponent create_octahedron_mesh (float radius, SDL_GPUDevice* device) {
 
     SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = sizeof (vertices);
-    int vbo_failed = PAL_UploadVertices (device, vertices, vertices_size, &vbo);
+    Uint32 vbo_failed =
+        PAL_UploadVertices (device, vertices, vertices_size, &vbo);
     if (vbo_failed) return null_mesh;
 
     SDL_GPUBuffer* ibo = NULL;
     Uint64 indices_size = sizeof (indices);
-    int ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
+    Uint32 ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
     if (ibo_failed) {
         SDL_ReleaseGPUBuffer (device, vbo);
         return null_mesh;

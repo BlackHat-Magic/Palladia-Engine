@@ -8,25 +8,25 @@ PAL_MeshComponent*
 PAL_CreateCapsuleMesh (static PAL_CapsuleMeshCreateInfo* info) {
     if (info->cap_segments < 1) info->cap_segments = 1;
 
-    int num_points = (info->cap_segments + 1) * 2;
+    Uint32 num_points = (info->cap_segments + 1) * 2;
     if (info->height <= 0.0f) num_points -= 1;
 
     vec2* points = (vec2*) malloc (num_points * sizeof (vec2));
     if (points == NULL) return NULL;
 
     float half_height = info->height * 0.5f;
-    int idx = 0;
+    Uint32 idx = 0;
 
-    for (int i = 0; i <= info->cap_segments; i++) {
+    for (Uint32 i = 0; i <= info->cap_segments; i++) {
         float theta = (float) i / (float) cap_segments * (float) M_PI * 0.5f;
         points[idx].x = info->radius * sinf (theta);
         points[idx].y = -half_height - info->radius * cosf (theta);
         idx++;
     }
 
-    int top_start =
+    Uint32 top_start =
         (info->height <= 0.0f) ? info->cap_segments - 1 : info->cap_segments;
-    for (int i = top_start; i >= 0; i--) {
+    for (Uint32 i = top_start; i >= 0; i--) {
         float theta =
             (float) i / (float) info->cap_segments * (float) M_PI * 0.5f;
         points[idx].x = info->radius * sinf (theta);

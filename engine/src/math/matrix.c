@@ -145,7 +145,7 @@ vec3 vec3_rotate (vec4 q, vec3 v) {
 
 // MAT4
 void mat4_identity (mat4 m) {
-    for (int i = 0; i < 16; i++)
+    for (Uint32 i = 0; i < 16; i++)
         m[i] = 0.0f;
     m[MAT4_IDX (0, 0)] = m[MAT4_IDX (1, 1)] = m[MAT4_IDX (2, 2)] =
         m[MAT4_IDX (3, 3)] = 1.0f;
@@ -228,16 +228,16 @@ void mat4_scale (mat4 m, vec3 v) {
 }
 void mat4_multiply (mat4 out, mat4 a, mat4 b) {
     mat4 temp;
-    for (int row = 0; row < 4; row++) {
-        for (int col = 0; col < 4; col++) {
+    for (Uint32 row = 0; row < 4; row++) {
+        for (Uint32 col = 0; col < 4; col++) {
             temp[MAT4_IDX (row, col)] = 0.0f;
-            for (int k = 0; k < 4; k++) {
+            for (Uint32 k = 0; k < 4; k++) {
                 temp[MAT4_IDX (row, col)] +=
                     a[MAT4_IDX (row, k)] * b[MAT4_IDX (k, col)];
             }
         }
     }
-    for (int i = 0; i < 16; i++)
+    for (Uint32 i = 0; i < 16; i++)
         out[i] = temp[i];
 }
 void mat4_perspective (
@@ -277,7 +277,7 @@ void mat4_look_at (mat4 m, vec3 eye, vec3 center, vec3 up) {
     m[MAT4_IDX (2, 3)] = vec3_dot (f, eye);
 }
 
-void random_seed (unsigned int seed) {
+void random_seed (unsigned Uint32 seed) {
     srand (seed);
 }
 
@@ -289,9 +289,9 @@ float random_float_range (float min, float max) {
     return min + random_float () * (max - min);
 }
 
-int random_int (int min, int max) {
+Uint32 random_int (Uint32 min, Uint32 max) {
     if (min > max) {
-        int temp = min;
+        Uint32 temp = min;
         min = max;
         max = temp;
     }

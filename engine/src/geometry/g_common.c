@@ -129,12 +129,12 @@ SDL_GPUBuffer* PAL_UploadIndices (
 
 void PAL_ComputeNormals (
     float* vertices,
-    int num_vertices,
+    Uint32 num_vertices,
     const Uint32* indices,
-    int num_indices,
-    int stride,
-    int pos_offset,
-    int norm_offset
+    Uint32 num_indices,
+    Uint32 stride,
+    Uint32 pos_offset,
+    Uint32 norm_offset
 ) {
     // Accumulate normals per vertex
     vec3* accum_norms = (vec3*) calloc (num_vertices, sizeof (vec3));
@@ -143,10 +143,10 @@ void PAL_ComputeNormals (
         return;
     }
 
-    for (int i = 0; i < num_indices; i += 3) {
-        int ia = indices[i];
-        int ib = indices[i + 1];
-        int ic = indices[i + 2];
+    for (Uint32 i = 0; i < num_indices; i += 3) {
+        Uint32 ia = indices[i];
+        Uint32 ib = indices[i + 1];
+        Uint32 ic = indices[i + 2];
 
         vec3 a = {
             vertices[ia * stride + pos_offset],
@@ -174,7 +174,7 @@ void PAL_ComputeNormals (
     }
 
     // Normalize and assign
-    for (int i = 0; i < num_vertices; i++) {
+    for (Uint32 i = 0; i < num_vertices; i++) {
         vec3 norm = vec3_normalize (accum_norms[i]);
         vertices[i * stride + norm_offset] = norm.x;
         vertices[i * stride + norm_offset + 1] = norm.y;

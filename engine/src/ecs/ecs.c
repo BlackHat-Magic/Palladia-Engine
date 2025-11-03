@@ -280,7 +280,7 @@ void add_ambient_light (Entity e, SDL_FColor color, gpu_renderer* renderer) {
     pool_add (&ambient_light_pool, e, &comp, sizeof (AmbientLightComponent));
 
     GPUAmbientLight all_lights[ambient_light_pool.count];
-    for (int i = 0; i < ambient_light_pool.count; i++) {
+    for (Uint32 i = 0; i < ambient_light_pool.count; i++) {
         Entity light_entity = ambient_light_pool.index_to_entity[i];
         GPUAmbientLight gpu_light = {0};
 
@@ -364,7 +364,7 @@ void add_point_light (Entity e, SDL_FColor color, gpu_renderer* renderer) {
 
     // reconstruct point light buffer
     GPUPointLight all_lights[point_light_pool.count];
-    for (int i = 0; i < point_light_pool.count; i++) {
+    for (Uint32 i = 0; i < point_light_pool.count; i++) {
         // create gpu light
         Entity light_entity = point_light_pool.index_to_entity[i];
         GPUPointLight gpu_light = {0};
@@ -591,7 +591,7 @@ void fps_controller_update_system (float dt) {
         vec3 right = vec3_rotate (trans->rotation, (vec3) {1.0f, 0.0f, 0.0f});
         vec3 up = vec3_rotate (trans->rotation, (vec3) {0.0f, 1.0f, 0.0f});
 
-        int numkeys;
+        Uint32 numkeys;
         const bool* key_state = SDL_GetKeyboardState (&numkeys);
         vec3 motion = {0.0f, 0.0f, 0.0f};
         if (key_state[SDL_SCANCODE_W]) motion = vec3_add (motion, forward);
@@ -789,7 +789,7 @@ SDL_AppResult render_system (
 
     // draw queued texts
     *preui = SDL_GetTicksNS ();
-    for (int i = 0; i < ui_pool.count; i++) {
+    for (Uint32 i = 0; i < ui_pool.count; i++) {
         UIComponent* ui = &((UIComponent*) ui_pool.data)[i];
 
         bool scissor_enabled = false;
@@ -828,10 +828,10 @@ SDL_AppResult render_system (
                     }
                 } else {
                     SDL_Rect scissor = {
-                        (int) mu_command->clip.rect.x,
-                        (int) mu_command->clip.rect.y,
-                        (int) mu_command->clip.rect.w,
-                        (int) mu_command->clip.rect.h,
+                        (Uint32) mu_command->clip.rect.x,
+                        (Uint32) mu_command->clip.rect.y,
+                        (Uint32) mu_command->clip.rect.w,
+                        (Uint32) mu_command->clip.rect.h,
                     };
                     SDL_SetGPUScissor (pass, &scissor);
                     scissor_enabled = true;
@@ -846,7 +846,7 @@ SDL_AppResult render_system (
         if (ui->rect_count == 0) continue;
         SDL_BindGPUGraphicsPipeline (pass, ui->pipeline);
 
-        for (int r = 0; r < ui->rect_count; r++) {
+        for (Uint32 r = 0; r < ui->rect_count; r++) {
             UIRect* rect = &ui->rects[r];
 
             float rx = (float) renderer->width;

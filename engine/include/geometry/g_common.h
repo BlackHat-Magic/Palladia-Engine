@@ -3,7 +3,7 @@
 #include <SDL3/SDL_gpu.h>
 
 // Returns 0 on success, 1 on failure
-int PAL_UploadVertices (
+Uint32 PAL_UploadVertices (
     SDL_GPUDevice* device,
     const void* vertices,
     Uint64 vertices_size,
@@ -11,7 +11,7 @@ int PAL_UploadVertices (
 );
 
 // Returns 0 on success, 1 on failure
-int PAL_UploadIndices (
+Uint32 PAL_UploadIndices (
     SDL_GPUDevice* device,
     const void* indices,
     Uint64 indices_size,
@@ -20,10 +20,10 @@ int PAL_UploadIndices (
 
 void PAL_ComputeNormals (
     float* vertices,
-    int num_vertices,
+    Uint32 num_vertices,
     const Uint32* indices,
-    int num_indices,
-    int stride,
-    int pos_offset,
-    int norm_offset
+    Uint32 num_indices,
+    Uint32 stride,
+    Uint32 pos_offset,
+    Uint32 norm_offset
 );

@@ -48,7 +48,7 @@ SDL_AppResult SDL_AppEvent (void* appstate, SDL_Event* event) {
     return SDL_APP_CONTINUE;
 }
 
-SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
+SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
     SDL_SetAppMetadata (
         "Asmadi Engine Box Geometry", "0.1.0", "xyz.lukeh.Asmadi-Engine"
     );
@@ -141,9 +141,9 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     // TODO: fix that
     // also it'd be nice to be able to initialize the entity pool to some
     // starting number if we know ahead of time that we need a lot.
-    for (int i = -10; i < 10; i++) {
-        for (int j = -10; j < 10; j++) {
-            for (int k = -10; k < 10; k++) {
+    for (Uint32 i = -10; i < 10; i++) {
+        for (Uint32 j = -10; j < 10; j++) {
+            for (Uint32 k = -10; k < 10; k++) {
                 Entity ico = create_entity ();
                 icosahedrons[(i + 10) * 400 + (j + 10) * 20 + (k + 10)] = ico;
                 PAL_MeshComponent icosahedron_mesh =
@@ -181,7 +181,7 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     add_ambient_light (ambient_light, (vec3) {1.0f, 1.0f, 1.0f}, 0.1f);
 
     // four point lights for now
-    for (int i = 0; i < 4; i++) {
+    for (Uint32 i = 0; i < 4; i++) {
         Entity point_light = create_entity ();
         add_point_light (point_light, (vec3) {1.0f, 1.0f, 1.0f}, 1.0f);
         vec3 position = {
@@ -229,7 +229,7 @@ SDL_AppResult SDL_AppIterate (void* appstate) {
 
     frame_start = SDL_GetTicksNS ();
 
-    for (int i = 0; i < 8000; i++) {
+    for (Uint32 i = 0; i < 8000; i++) {
         Entity icosahedron = icosahedrons[i];
 
         TransformComponent transform = *get_transform (icosahedron);
