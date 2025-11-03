@@ -2,7 +2,7 @@
 
 #include <ecs/ecs.h>
 
-MeshComponent create_sphere_mesh (
+PAL_MeshComponent create_sphere_mesh (
     float radius,
     int width_segments,
     int height_segments,

@@ -4,9 +4,9 @@
 #include <geometry/circle.h>
 #include <geometry/g_common.h>
 
-MeshComponent
+PAL_MeshComponent
 create_circle_mesh (float radius, int segments, SDL_GPUDevice* device) {
-    MeshComponent null_mesh = (MeshComponent) {0};
+    PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
     if (segments < 3) {
         SDL_Log ("Circle must have at least 3 segments");
         return null_mesh;
@@ -78,24 +78,24 @@ create_circle_mesh (float radius, int segments, SDL_GPUDevice* device) {
     // Upload to GPU
     SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
-    int vbo_failed = upload_vertices (device, vertices, vertices_size, &vbo);
+    int vbo_failed = PAL_UploadVertices (device, vertices, vertices_size, &vbo);
     free (vertices);
     if (vbo_failed) {
         free (indices);
-        return null_mesh; // Logging handled in upload_vertices
+        return null_mesh; // Logging handled in PAL_UploadVertices
     }
 
     SDL_GPUBuffer* ibo = NULL;
     Uint64 indices_size = num_indices * sizeof (Uint16);
-    int ibo_failed = upload_indices (device, indices, indices_size, &ibo);
+    int ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
     free (indices);
     if (ibo_failed) {
         SDL_ReleaseGPUBuffer (device, vbo);
-        return null_mesh; // Logging handled in upload_indices
+        return null_mesh; // Logging handled in PAL_UploadIndices
     }
 
-    MeshComponent out_mesh =
-        (MeshComponent) {.vertex_buffer = vbo,
+    PAL_MeshComponent out_mesh =
+        (PAL_MeshComponent) {.vertex_buffer = vbo,
                          .num_vertices = (Uint32) num_vertices,
                          .index_buffer = ibo,
                          .num_indices = (Uint32) num_indices,

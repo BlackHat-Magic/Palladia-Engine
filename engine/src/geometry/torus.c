@@ -5,7 +5,7 @@
 #include <geometry/torus.h>
 #include <math/matrix.h>
 
-MeshComponent create_torus_mesh (
+PAL_MeshComponent create_torus_mesh (
     float radius,
     float tube_radius,
     int radial_segments,
@@ -13,7 +13,7 @@ MeshComponent create_torus_mesh (
     float arc,
     SDL_GPUDevice* device
 ) {
-    MeshComponent null_mesh = (MeshComponent) {0};
+    PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
     if (radial_segments < 3 || tubular_segments < 3) {
         SDL_Log ("Torus must have at least 3 segments in each direction");
         return null_mesh;
@@ -124,24 +124,24 @@ MeshComponent create_torus_mesh (
     // Upload to GPU
     SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
-    if (upload_vertices (device, vertices, vertices_size, &vbo)) {
+    if (PAL_UploadVertices (device, vertices, vertices_size, &vbo)) {
         free (vertices);
         free (indices);
-        return null_mesh; // Logging handled in upload_vertices
+        return null_mesh; // Logging handled in PAL_UploadVertices
     }
     free (vertices);
 
     SDL_GPUBuffer* ibo = NULL;
     Uint64 indices_size = num_indices * sizeof (Uint16);
-    if (upload_indices (device, indices, indices_size, &ibo)) {
+    if (PAL_UploadIndices (device, indices, indices_size, &ibo)) {
         SDL_ReleaseGPUBuffer (device, vbo);
         free (indices);
-        return null_mesh; // Logging handled in upload_indices
+        return null_mesh; // Logging handled in PAL_UploadIndices
     }
     free (indices);
 
-    MeshComponent out_mesh =
-        (MeshComponent) {.vertex_buffer = vbo,
+    PAL_MeshComponent out_mesh =
+        (PAL_MeshComponent) {.vertex_buffer = vbo,
                          .num_vertices = (Uint32) num_vertices,
                          .index_buffer = ibo,
                          .num_indices = (Uint32) num_indices,

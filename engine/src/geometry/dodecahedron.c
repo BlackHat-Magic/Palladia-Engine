@@ -6,7 +6,7 @@
 #include <geometry/g_common.h>
 #include <math/matrix.h>
 
-MeshComponent create_dodecahedron_mesh (float radius, SDL_GPUDevice* device) {
+PAL_MeshComponent create_dodecahedron_mesh (float radius, SDL_GPUDevice* device) {
     float phi = (1.0f + sqrtf (5.0f)) / 2.0f;
     float phi_inv = 1.0f / phi;
 
@@ -26,7 +26,7 @@ MeshComponent create_dodecahedron_mesh (float radius, SDL_GPUDevice* device) {
     float* vertices = (float*) malloc (num_vertices * 8 * sizeof (float));
     if (!vertices) {
         SDL_Log ("Failed to allocate vertices for dodecahedron mesh");
-        return (MeshComponent) {0};
+        return (PAL_MeshComponent) {0};
     }
 
     int vertex_idx = 0;
@@ -70,20 +70,20 @@ MeshComponent create_dodecahedron_mesh (float radius, SDL_GPUDevice* device) {
 
     SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
-    int vbo_failed = upload_vertices (device, vertices, vertices_size, &vbo);
+    int vbo_failed = PAL_UploadVertices (device, vertices, vertices_size, &vbo);
     free (vertices);
-    if (vbo_failed) return (MeshComponent) {0};
+    if (vbo_failed) return (PAL_MeshComponent) {0};
 
     SDL_GPUBuffer* ibo = NULL;
     Uint64 indices_size = num_indices * sizeof (Uint16);
-    int ibo_failed = upload_indices (device, indices, indices_size, &ibo);
+    int ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
     if (ibo_failed) {
         SDL_ReleaseGPUBuffer (device, vbo);
-        return (MeshComponent) {0};
+        return (PAL_MeshComponent) {0};
     }
 
-    MeshComponent out_mesh =
-        (MeshComponent) {.vertex_buffer = vbo,
+    PAL_MeshComponent out_mesh =
+        (PAL_MeshComponent) {.vertex_buffer = vbo,
                          .num_vertices = (Uint32) num_vertices,
                          .index_buffer = ibo,
                          .num_indices = (Uint32) num_indices,

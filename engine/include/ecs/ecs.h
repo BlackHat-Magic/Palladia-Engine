@@ -27,7 +27,7 @@ typedef struct {
     SDL_GPUBuffer* index_buffer;
     Uint32 num_indices;
     SDL_GPUIndexElementSize index_size;
-} MeshComponent;
+} PAL_MeshComponent;
 
 typedef struct {
     SDL_FColor color;
@@ -103,8 +103,8 @@ bool has_transform (Entity e);
 void remove_transform (Entity e);
 
 // Meshes
-void add_mesh (Entity e, MeshComponent mesh);
-MeshComponent* get_mesh (Entity e);
+void PAL_AddMeshComponent (Entity e, PAL_MeshComponent* mesh);
+PAL_MeshComponent* PAL_GetMeshComponent (Entity e);
 bool has_mesh (Entity e);
 void remove_mesh (SDL_GPUDevice* device, Entity e); // state for device release
 

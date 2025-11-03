@@ -2,7 +2,7 @@
 
 #include <ecs/ecs.h>
 
-MeshComponent create_plane_mesh (
+PAL_MeshComponent create_plane_mesh (
     float width,
     float height,
     int width_segments,

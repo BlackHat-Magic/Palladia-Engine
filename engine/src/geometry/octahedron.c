@@ -5,8 +5,8 @@
 #include <geometry/octahedron.h>
 #include <math/matrix.h>
 
-MeshComponent create_octahedron_mesh (float radius, SDL_GPUDevice* device) {
-    MeshComponent null_mesh = (MeshComponent) {0};
+PAL_MeshComponent create_octahedron_mesh (float radius, SDL_GPUDevice* device) {
+    PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
     const int num_vertices = 6;
     float vertices[6 * 8] = {0};
     vec3 pos[6] = {
@@ -47,19 +47,19 @@ MeshComponent create_octahedron_mesh (float radius, SDL_GPUDevice* device) {
 
     SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = sizeof (vertices);
-    int vbo_failed = upload_vertices (device, vertices, vertices_size, &vbo);
+    int vbo_failed = PAL_UploadVertices (device, vertices, vertices_size, &vbo);
     if (vbo_failed) return null_mesh;
 
     SDL_GPUBuffer* ibo = NULL;
     Uint64 indices_size = sizeof (indices);
-    int ibo_failed = upload_indices (device, indices, indices_size, &ibo);
+    int ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
     if (ibo_failed) {
         SDL_ReleaseGPUBuffer (device, vbo);
         return null_mesh;
     }
 
-    MeshComponent out_mesh =
-        (MeshComponent) {.vertex_buffer = vbo,
+    PAL_MeshComponent out_mesh =
+        (PAL_MeshComponent) {.vertex_buffer = vbo,
                          .num_vertices = (Uint32) num_vertices,
                          .index_buffer = ibo,
                          .num_indices = sizeof (indices) / sizeof (Uint16),

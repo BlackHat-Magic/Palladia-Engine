@@ -56,7 +56,7 @@ typedef struct {
     gpu_renderer* renderer;
     Entity player;
     Entity entity;
-    MeshComponent meshes[13];
+    PAL_MeshComponent* meshes[13];
     geometry current_mesh;
     Uint8 test;
     Uint64 last_time;
@@ -101,13 +101,13 @@ SDL_AppResult SDL_AppEvent (void* appstate, SDL_Event* event) {
         if (event->key.key == SDLK_F3) state->debug = !state->debug;
         if (event->key.key == SDLK_UP) {
             if (state->current_mesh < GEO_TORUS) {
-                MeshComponent* current_mesh = get_mesh (state->entity);
+                PAL_MeshComponent* current_mesh = PAL_GetMeshComponent (state->entity);
                 *current_mesh = state->meshes[++state->current_mesh];
             }
         }
         if (event->key.key == SDLK_DOWN) {
             if (state->current_mesh > GEO_CIRCLE) {
-                MeshComponent* current_mesh = get_mesh (state->entity);
+                PAL_MeshComponent* current_mesh = PAL_GetMeshComponent (state->entity);
                 *current_mesh = state->meshes[--state->current_mesh];
             }
         }
@@ -218,7 +218,16 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     // platonic solids
     state->meshes[GEO_TETRAHEDRON] = create_tetrahedron_mesh (0.5f, state->renderer->device);
     if (state->meshes[GEO_TETRAHEDRON].vertex_buffer == NULL) return SDL_APP_FAILURE;
-    state->meshes[GEO_BOX] = create_box_mesh (1.0f, 1.0f, 1.0f, state->renderer->device);
+
+    // box mesh
+    PAL_BoxMeshCreateInfo box_info = {
+        .l = 1.0f,
+        .w = 1.0f,
+        .h = 1.0f,
+        .device = state->renderer->device
+    };
+    state->meshes[GEO_BOX] = PAL_CreateBoxMesh (&box_info);
+
     if (state->meshes[GEO_BOX].vertex_buffer == NULL) return SDL_APP_FAILURE;
     state->meshes[GEO_OCTAHEDRON] = create_octahedron_mesh (0.5f, state->renderer->device);
     if (state->meshes[GEO_OCTAHEDRON].vertex_buffer == NULL) return SDL_APP_FAILURE;
@@ -249,7 +258,7 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     if (state->meshes[GEO_TORUS].vertex_buffer == NULL) return SDL_APP_FAILURE;
 
     // add mesh
-    add_mesh (state->entity, state->meshes[0]);
+    PAL_AddMeshComponent (state->entity, state->meshes[0]);
 
     // torus material
     SDL_GPUSamplerCreateInfo torus_sampler_info = {

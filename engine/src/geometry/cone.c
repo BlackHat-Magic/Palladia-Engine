@@ -1,7 +1,7 @@
 #include <geometry/cone.h>
 #include <geometry/cylinder.h>
 
-MeshComponent create_cone_mesh (
+PAL_MeshComponent create_cone_mesh (
     float radius,
     float height,
     int radial_segments,

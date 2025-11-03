@@ -2,7 +2,7 @@
 
 #include <ecs/ecs.h>
 
-MeshComponent create_cylinder_mesh (
+PAL_MeshComponent create_cylinder_mesh (
     float radius_top,
     float radius_bottom,
     float height,

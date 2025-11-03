@@ -3,7 +3,7 @@
 #include <ecs/ecs.h>
 #include <math/matrix.h>
 
-MeshComponent create_lathe_mesh (
+PAL_MeshComponent create_lathe_mesh (
     vec2* path,
     int path_length,
     int segments,

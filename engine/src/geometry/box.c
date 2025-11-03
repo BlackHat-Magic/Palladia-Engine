@@ -2,13 +2,15 @@
 #include <geometry/box.h>
 #include <geometry/g_common.h>
 
-MeshComponent
-create_box_mesh (float l, float w, float h, SDL_GPUDevice* device) {
-    MeshComponent out_mesh = {0};
+PAL_MeshComponent* PAL_CreateBoxMesh (PAL_BoxMeshCreateInfo* info) {
+    PAL_MeshComponent out_mesh = malloc (sizeof (PAL_MeshComponent));
+    if (PAL_MeshComponent == NULL) {
+        return NULL;
+    }
 
-    float wx = w / 2.0f;
-    float hy = h / 2.0f;
-    float lz = l / 2.0f;
+    float wx = info->w / 2.0f;
+    float hy = info->h / 2.0f;
+    float lz = info->l / 2.0f;
 
     float vertices[24 * 8] = {
         // front (-z)
@@ -60,25 +62,24 @@ create_box_mesh (float l, float w, float h, SDL_GPUDevice* device) {
 
     compute_vertex_normals (vertices, 24, indices, 36, 8, 0, 3);
 
-    SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = sizeof (vertices);
-    int vbo_failed = upload_vertices (device, vertices, vertices_size, &vbo);
-    if (vbo_failed)
-        return (MeshComponent) {0}; // logging handled in upload_vertices()
+    SDL_GPUBuffer* vbo =
+        PAL_UploadVertices (info->device, vertices, vertices_size);
+    if (vbo == NULL) return NULL; // caller handles logging
 
-    SDL_GPUBuffer* ibo = NULL;
     Uint64 indices_size = sizeof (indices);
-    int ibo_failed = upload_indices (device, indices, indices_size, &ibo);
-    if (ibo_failed) {
-        SDL_ReleaseGPUBuffer (device, vbo);
-        return (MeshComponent) {0}; // logging handled in upload_indices()
+    SDL_GPUBuffer* ibo =
+        PAL_UploadIndices (info->device, indices, indices_size, &ibo);
+    if (ibo == NULL) {
+        SDL_ReleaseGPUBuffer (info->device, vbo);
+        return NULL; // caller handles logging
     }
 
-    out_mesh.vertex_buffer = vbo;
-    out_mesh.num_vertices = 24;
-    out_mesh.index_buffer = ibo;
-    out_mesh.num_indices = 36;
-    out_mesh.index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT;
+    out_mesh->vertex_buffer = vbo;
+    out_mesh->num_vertices = 24;
+    out_mesh->index_buffer = ibo;
+    out_mesh->num_indices = 36;
+    out_mesh->index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT;
 
     return out_mesh;
 }

@@ -158,24 +158,26 @@ void remove_transform (Entity e) {
 }
 
 // Meshes
-void add_mesh (Entity e, MeshComponent mesh) {
-    pool_add (&mesh_pool, e, &mesh, sizeof (MeshComponent));
+void PAL_AddMeshComponent (Entity e, PAL_MeshComponent* mesh) {
+    pool_add (&mesh_pool, e, &mesh, sizeof (PAL_MeshComponent*));
 }
-MeshComponent* get_mesh (Entity e) {
-    return (MeshComponent*) pool_get (&mesh_pool, e, sizeof (MeshComponent));
+PAL_MeshComponent* PAL_GetMeshComponent (Entity e) {
+    // the most safe and wonderful getter 🥰
+    PAL_MeshComponent** mesh = (PAL_MeshComponent**) pool_get (&mesh_pool, e, sizeof (PAL_MeshComponent));
+    return *mesh;
 }
 bool has_mesh (Entity e) {
     return pool_has (&mesh_pool, e);
 }
 void remove_mesh (SDL_GPUDevice* device, Entity e) {
-    MeshComponent* mesh = get_mesh (e);
+    PAL_MeshComponent* mesh = PAL_GetMeshComponent (e);
     if (mesh) {
         if (mesh->vertex_buffer)
             SDL_ReleaseGPUBuffer (device, mesh->vertex_buffer);
         if (mesh->index_buffer)
             SDL_ReleaseGPUBuffer (device, mesh->index_buffer);
     }
-    pool_remove (&mesh_pool, e, sizeof (MeshComponent));
+    pool_remove (&mesh_pool, e, sizeof (PAL_MeshComponent));
 }
 
 // Materials
@@ -709,7 +711,7 @@ SDL_AppResult render_system (
     *prerender = SDL_GetTicksNS ();
     for (Uint32 i = 0; i < mesh_pool.count; i++) {
         Entity e = mesh_pool.index_to_entity[i];
-        MeshComponent* mesh = get_mesh (e);
+        PAL_MeshComponent* mesh = PAL_GetMeshComponent (e);
         if (mesh == NULL) continue;
         MaterialComponent* mat = get_material (e);
         TransformComponent* trans = get_transform (e);

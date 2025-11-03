@@ -3,14 +3,14 @@
 #include <geometry/g_common.h>
 #include <geometry/plane.h>
 
-MeshComponent create_plane_mesh (
+PAL_MeshComponent create_plane_mesh (
     float width,
     float height,
     int width_segments,
     int height_segments,
     SDL_GPUDevice* device
 ) {
-    MeshComponent null_mesh = (MeshComponent) {0};
+    PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
     if (width_segments < 1) width_segments = 1;
     if (height_segments < 1) height_segments = 1;
 
@@ -85,23 +85,23 @@ MeshComponent create_plane_mesh (
 
     SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
-    int vbo_failed = upload_vertices (device, vertices, vertices_size, &vbo);
+    int vbo_failed = PAL_UploadVertices (device, vertices, vertices_size, &vbo);
     free (vertices);
     if (vbo_failed) {
         free (indices);
-        return null_mesh; // logging handled in upload_vertices()
+        return null_mesh; // logging handled in PAL_UploadVertices()
     }
 
     SDL_GPUBuffer* ibo = NULL;
     Uint64 indices_size = num_indices * sizeof (Uint16);
-    int ibo_failed = upload_indices (device, indices, indices_size, &ibo);
+    int ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
     free (indices);
     if (ibo_failed) {
-        return null_mesh; // logging handled in upload_indices()
+        return null_mesh; // logging handled in PAL_UploadIndices()
     }
 
-    MeshComponent out_mesh =
-        (MeshComponent) {.vertex_buffer = vbo,
+    PAL_MeshComponent out_mesh =
+        (PAL_MeshComponent) {.vertex_buffer = vbo,
                          .num_vertices = (Uint32) num_vertices,
                          .index_buffer = ibo,
                          .num_indices = (Uint32) num_indices,

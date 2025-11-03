@@ -6,64 +6,54 @@
 #include <geometry/g_common.h>
 #include <math/matrix.h>
 
-// Returns 0 on success, 1 on failure
-int upload_vertices (
+SDL_GPUBuffer* PAL_UploadVertices (
     SDL_GPUDevice* device,
     const void* vertices,
     Uint64 vertices_size,
-    SDL_GPUBuffer** vbo_out
 ) {
     SDL_GPUBufferCreateInfo vbo_info = {
         .size = (Uint32) vertices_size,
         .usage = SDL_GPU_BUFFERUSAGE_VERTEX
     };
     SDL_GPUBuffer* vbo = SDL_CreateGPUBuffer (device, &vbo_info);
-    if (!vbo) {
-        SDL_Log ("Failed to create vertex buffer: %s", SDL_GetError ());
-        return 1;
-    }
+    if (vbo == NULL) return NULL;
 
-    SDL_GPUTransferBufferCreateInfo trans_info = {
+    SDL_GPUTransferBufferCreateInfo tinfo = {
         .size = (Uint32) vertices_size,
         .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD
     };
-    SDL_GPUTransferBuffer* trans_buf =
-        SDL_CreateGPUTransferBuffer (device, &trans_info);
-    if (!trans_buf) {
-        SDL_Log ("Failed to create transfer buffer: %s", SDL_GetError ());
+    SDL_GPUTransferBuffer* tbuf = SDL_CreateGPUTransferBuffer (device, &tinfo);
+    if (tbuf == NULL) {
         SDL_ReleaseGPUBuffer (device, vbo);
-        return 1;
+        return NULL;
     }
 
-    void* data = SDL_MapGPUTransferBuffer (device, trans_buf, false);
-    if (!data) {
-        SDL_Log ("Failed to map transfer buffer: %s", SDL_GetError ());
-        SDL_ReleaseGPUTransferBuffer (device, trans_buf);
+    void* data = SDL_MapGPUTransferBuffer (device, tbuf, false);
+    if (data == NULL) {
+        SDL_ReleaseGPUTransferBuffer (device, tbuf);
         SDL_ReleaseGPUBuffer (device, vbo);
-        return 1;
+        return NULL;
     }
     memcpy (data, vertices, vertices_size);
-    SDL_UnmapGPUTransferBuffer (device, trans_buf);
+    SDL_UnmapGPUTransferBuffer (device, tbuf);
 
     SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer (device);
-    if (!cmd) {
-        SDL_Log ("Failed to acquire command buffer: %s", SDL_GetError ());
-        SDL_ReleaseGPUTransferBuffer (device, trans_buf);
+    if (cmd == NULL) {
+        SDL_ReleaseGPUTransferBuffer (device, tbuf);
         SDL_ReleaseGPUBuffer (device, vbo);
-        return 1;
+        return NULL;
     }
 
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass (cmd);
-    if (!copy_pass) {
-        SDL_Log ("Failed to begin copy pass: %s", SDL_GetError ());
+    if (copy_pass == NULL) {
         SDL_SubmitGPUCommandBuffer (cmd);
-        SDL_ReleaseGPUTransferBuffer (device, trans_buf);
+        SDL_ReleaseGPUTransferBuffer (device, tbuf);
         SDL_ReleaseGPUBuffer (device, vbo);
-        return 1;
+        return NULL;
     }
 
     SDL_GPUTransferBufferLocation src_loc = {
-        .transfer_buffer = trans_buf,
+        .transfer_buffer = tbuf,
         .offset = 0
     };
     SDL_GPUBufferRegion dst_reg =
@@ -72,69 +62,59 @@ int upload_vertices (
     SDL_EndGPUCopyPass (copy_pass);
     SDL_SubmitGPUCommandBuffer (cmd);
 
-    SDL_ReleaseGPUTransferBuffer (device, trans_buf);
-    *vbo_out = vbo;
-    return 0;
+    SDL_ReleaseGPUTransferBuffer (device, tbuf);
+    return vbo;
 }
 
 // Returns 0 on success, 1 on failure
-int upload_indices (
+SDL_GPUBuffer* PAL_UploadIndices (
     SDL_GPUDevice* device,
     const void* indices,
     Uint64 indices_size,
-    SDL_GPUBuffer** ibo_out
 ) {
     SDL_GPUBufferCreateInfo ibo_info = {
         .size = (Uint32) indices_size,
         .usage = SDL_GPU_BUFFERUSAGE_INDEX
     };
     SDL_GPUBuffer* ibo = SDL_CreateGPUBuffer (device, &ibo_info);
-    if (!ibo) {
-        SDL_Log ("Failed to create index buffer: %s", SDL_GetError ());
-        return 1;
-    }
+    if (ibo == NULL) return NULL;
 
-    SDL_GPUTransferBufferCreateInfo trans_info = {
+    SDL_GPUTransferBufferCreateInfo tinfo = {
         .size = (Uint32) indices_size,
         .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD
     };
-    SDL_GPUTransferBuffer* trans_buf =
-        SDL_CreateGPUTransferBuffer (device, &trans_info);
-    if (!trans_buf) {
-        SDL_Log ("Failed to create transfer buffer: %s", SDL_GetError ());
+    SDL_GPUTransferBuffer* tbuf = SDL_CreateGPUTransferBuffer (device, &tinfo);
+    if (tbuf == NULL) {
         SDL_ReleaseGPUBuffer (device, ibo);
-        return 1;
+        return NULL;
     }
 
-    void* data = SDL_MapGPUTransferBuffer (device, trans_buf, false);
-    if (!data) {
-        SDL_Log ("Failed to map transfer buffer: %s", SDL_GetError ());
-        SDL_ReleaseGPUTransferBuffer (device, trans_buf);
+    void* data = SDL_MapGPUTransferBuffer (device, tbuf, false);
+    if (data == NULL) {
+        SDL_ReleaseGPUTransferBuffer (device, tbuf);
         SDL_ReleaseGPUBuffer (device, ibo);
-        return 1;
+        return NULL;
     }
     memcpy (data, indices, indices_size);
-    SDL_UnmapGPUTransferBuffer (device, trans_buf);
+    SDL_UnmapGPUTransferBuffer (device, tbuf);
 
     SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer (device);
-    if (!cmd) {
-        SDL_Log ("Failed to acquire command buffer: %s", SDL_GetError ());
-        SDL_ReleaseGPUTransferBuffer (device, trans_buf);
+    if (cmd == NULL) {
+        SDL_ReleaseGPUTransferBuffer (device, tbuf);
         SDL_ReleaseGPUBuffer (device, ibo);
-        return 1;
+        return NULL;
     }
 
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass (cmd);
-    if (!copy_pass) {
-        SDL_Log ("Failed to begin copy pass: %s", SDL_GetError ());
+    if (copy_pass == NULL) {
         SDL_SubmitGPUCommandBuffer (cmd);
-        SDL_ReleaseGPUTransferBuffer (device, trans_buf);
+        SDL_ReleaseGPUTransferBuffer (device, tbuf);
         SDL_ReleaseGPUBuffer (device, ibo);
-        return 1;
+        return NULL;
     }
 
     SDL_GPUTransferBufferLocation src_loc = {
-        .transfer_buffer = trans_buf,
+        .transfer_buffer = tbuf,
         .offset = 0
     };
     SDL_GPUBufferRegion dst_reg =
@@ -143,9 +123,8 @@ int upload_indices (
     SDL_EndGPUCopyPass (copy_pass);
     SDL_SubmitGPUCommandBuffer (cmd);
 
-    SDL_ReleaseGPUTransferBuffer (device, trans_buf);
-    *ibo_out = ibo;
-    return 0;
+    SDL_ReleaseGPUTransferBuffer (device, tbuf);
+    return ibo;
 }
 
 void compute_vertex_normals (

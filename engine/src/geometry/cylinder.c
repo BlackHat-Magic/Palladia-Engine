@@ -3,7 +3,7 @@
 #include <geometry/cylinder.h>
 #include <geometry/lathe.h>
 
-MeshComponent create_cylinder_mesh (
+PAL_MeshComponent create_cylinder_mesh (
     float radius_top,
     float radius_bottom,
     float height,
@@ -14,12 +14,12 @@ MeshComponent create_cylinder_mesh (
     float theta_length,
     SDL_GPUDevice* device
 ) {
-    MeshComponent out_mesh = {0};
+    PAL_MeshComponent out_mesh = {0};
     if (radial_segments < 3 || height_segments < 1) {
         SDL_Log (
             "Cylinder must have at least 3 radial segments and 1 height segment"
         );
-        return (MeshComponent) {0};
+        return (PAL_MeshComponent) {0};
     }
 
     // Calculate num_points: sides (height_segments + 1) + optional 2 centers
@@ -29,7 +29,7 @@ MeshComponent create_cylinder_mesh (
     vec2* points = (vec2*) malloc (num_points * sizeof (vec2));
     if (!points) {
         SDL_Log ("Failed to allocate points for cylinder path");
-        return (MeshComponent) {0};
+        return (PAL_MeshComponent) {0};
     }
 
     int idx = 0;

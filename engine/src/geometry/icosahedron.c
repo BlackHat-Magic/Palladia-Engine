@@ -5,8 +5,8 @@
 #include <geometry/icosahedron.h>
 #include <math/matrix.h>
 
-MeshComponent create_icosahedron_mesh (float radius, SDL_GPUDevice* device) {
-    MeshComponent null_mesh = (MeshComponent) {0};
+PAL_MeshComponent create_icosahedron_mesh (float radius, SDL_GPUDevice* device) {
+    PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
     const int num_vertices = 12;
     float* vertices = (float*) malloc (num_vertices * 8 * sizeof (float));
     if (!vertices) {
@@ -76,21 +76,21 @@ MeshComponent create_icosahedron_mesh (float radius, SDL_GPUDevice* device) {
 
     SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
-    int vbo_failed = upload_vertices (device, vertices, vertices_size, &vbo);
+    int vbo_failed = PAL_UploadVertices (device, vertices, vertices_size, &vbo);
     free (vertices);
     if (vbo_failed) return null_mesh;
 
     SDL_GPUBuffer* ibo = NULL;
     Uint64 indices_size = 60 * sizeof (Uint16);
     int ibo_failed =
-        upload_indices (device, standard_indices, indices_size, &ibo);
+        PAL_UploadIndices (device, standard_indices, indices_size, &ibo);
     if (ibo_failed) {
         SDL_ReleaseGPUBuffer (device, vbo);
         return null_mesh;
     }
 
-    MeshComponent out_mesh =
-        (MeshComponent) {.vertex_buffer = vbo,
+    PAL_MeshComponent out_mesh =
+        (PAL_MeshComponent) {.vertex_buffer = vbo,
                          .num_vertices = (Uint32) num_vertices,
                          .index_buffer = ibo,
                          .num_indices = 60,

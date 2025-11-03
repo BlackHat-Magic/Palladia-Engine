@@ -4,7 +4,7 @@
 #include <geometry/lathe.h>
 #include <geometry/sphere.h>
 
-MeshComponent create_sphere_mesh (
+PAL_MeshComponent create_sphere_mesh (
     float radius,
     int width_segments,
     int height_segments,
@@ -14,7 +14,7 @@ MeshComponent create_sphere_mesh (
     float theta_length,
     SDL_GPUDevice* device
 ) {
-    MeshComponent null_mesh = (MeshComponent) {0};
+    PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
     if (width_segments < 3 || height_segments < 2) {
         SDL_Log (
             "Sphere must have at least 3 width segments and 2 height segments"
@@ -40,7 +40,7 @@ MeshComponent create_sphere_mesh (
     }
 
     // lathe returns normals
-    MeshComponent mesh = create_lathe_mesh (
+    PAL_MeshComponent mesh = create_lathe_mesh (
         points, num_points, width_segments, phi_start, phi_length, device
     );
     free (points);

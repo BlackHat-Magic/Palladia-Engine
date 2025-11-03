@@ -2,7 +2,7 @@
 
 #include <ecs/ecs.h>
 
-MeshComponent create_ring_mesh (
+PAL_MeshComponent create_ring_mesh (
     float inner_radius,
     float outer_radius,
     int theta_segments,

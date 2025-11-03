@@ -163,12 +163,12 @@ SDL_GPUTexture* create_white_texture (SDL_GPUDevice* device) {
 
     Uint8 pixel[4] = {255, 255, 255, 255}; // White pixel
 
-    SDL_GPUTransferBufferCreateInfo trans_info = {
+    SDL_GPUTransferBufferCreateInfo tinfo = {
         .size = 4,
         .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD
     };
     SDL_GPUTransferBuffer* trans =
-        SDL_CreateGPUTransferBuffer (device, &trans_info);
+        SDL_CreateGPUTransferBuffer (device, &tinfo);
     if (!trans) {
         SDL_Log (
             "Failed to create transfer buffer for white texture: %s",

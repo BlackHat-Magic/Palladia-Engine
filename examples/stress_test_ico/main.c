@@ -146,11 +146,11 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
             for (int k = -10; k < 10; k++) {
                 Entity ico = create_entity ();
                 icosahedrons[(i + 10) * 400 + (j + 10) * 20 + (k + 10)] = ico;
-                MeshComponent icosahedron_mesh =
+                PAL_MeshComponent icosahedron_mesh =
                     create_icosahedron_mesh (0.5, state->device);
                 if (icosahedron_mesh.vertex_buffer == NULL)
                     return SDL_APP_FAILURE;
-                add_mesh (ico, icosahedron_mesh);
+                PAL_AddMeshComponent (ico, icosahedron_mesh);
 
                 vec3 color = {
                     random_float (), random_float (), random_float ()
