@@ -7,7 +7,8 @@ PAL_MeshComponent PAL_CreatePlaneMesh (static PAL_PlaneMeshCreateInfo* info) {
     if (info->width_segments < 1) info->width_segments = 1;
     if (info->height_segments < 1) info->height_segments = 1;
 
-    Uint32 num_vertices = (info->width_segments + 1) * (info->height_segments + 1);
+    Uint32 num_vertices =
+        (info->width_segments + 1) * (info->height_segments + 1);
     Uint32 num_indices = info->width_segments * info->height_segments * 6;
 
     float* vertices = (float*) malloc (
@@ -75,7 +76,8 @@ PAL_MeshComponent PAL_CreatePlaneMesh (static PAL_PlaneMeshCreateInfo* info) {
     }
 
     Uint64 indices_size = num_indices * sizeof (Uint32);
-    SDL_GPUBuffer* ibo = PAL_UploadIndices (info->device, indices, indices_size, &ibo);
+    SDL_GPUBuffer* ibo =
+        PAL_UploadIndices (info->device, indices, indices_size, &ibo);
     free (indices);
     if (ibo == NULL) {
         SDL_ReleaseGPUBuffer (info->device, vbo);
@@ -88,12 +90,11 @@ PAL_MeshComponent PAL_CreatePlaneMesh (static PAL_PlaneMeshCreateInfo* info) {
         SDL_ReleaseGPUBuffer (info->device, ibo);
         return NULL;
     }
-    *mesh =
-        (PAL_MeshComponent) {.vertex_buffer = vbo,
-                             .num_vertices = num_vertices,
-                             .index_buffer = ibo,
-                             .num_indices = num_indices,
-                             .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
+    *mesh = (PAL_MeshComponent) {.vertex_buffer = vbo,
+                                 .num_vertices = num_vertices,
+                                 .index_buffer = ibo,
+                                 .num_indices = num_indices,
+                                 .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
 
     return mesh;
 }
