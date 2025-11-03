@@ -206,8 +206,14 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
     state->entity = create_entity ();
 
     // circle mesh
-    state->meshes[GEO_CIRCLE] = PAL_CreateCircleMesh (0.5f, 16, state->renderer->device);
-    if (state->meshes[GEO_CIRCLE].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    PAL_CircleMeshCreateInfo circle_info = {
+        .radius = 0.5f,
+        .segments = 16,
+        .device = state->renderer->device
+    };
+    state->meshes[GEO_CIRCLE] = PAL_CreateCircleMesh (&circle_info);
+    if (state->meshes[GEO_CIRCLE] == NULL) return SDL_APP_FAILURE;
+
     state->meshes[GEO_PLANE] = create_plane_mesh (1.0f, 1.0f, 1, 1, state->renderer->device);
     if (state->meshes[GEO_PLANE].vertex_buffer == NULL) return SDL_APP_FAILURE;
     state->meshes[GEO_RING] = create_ring_mesh (
@@ -227,8 +233,8 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
         .device = state->renderer->device
     };
     state->meshes[GEO_BOX] = PAL_CreateBoxMesh (&box_info);
+    if (state->meshes[GEO_BOX] == NULL) return SDL_APP_FAILURE;
 
-    if (state->meshes[GEO_BOX].vertex_buffer == NULL) return SDL_APP_FAILURE;
     state->meshes[GEO_OCTAHEDRON] = create_octahedron_mesh (0.5f, state->renderer->device);
     if (state->meshes[GEO_OCTAHEDRON].vertex_buffer == NULL) return SDL_APP_FAILURE;
     state->meshes[GEO_DODECAHEDRON] = create_dodecahedron_mesh (0.5f, state->renderer->device);
@@ -245,17 +251,37 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
         .device = state->renderer->device,
     };
     state->meshes[GEO_CAPSULE] = PAL_CreateCapsuleMesh (&capsule_info);
+    if (state->meshes[GEO_CAPSULE] == NULL) return SDL_APP_FAILURE;
 
-    // round bois
-    if (state->meshes[GEO_CAPSULE].vertex_buffer == NULL) return SDL_APP_FAILURE;
-    state->meshes[GEO_CONE] = create_cone_mesh (
-        0.5f, 1.0f, 16, 1, false, 0.0f, 2.0f * (float) M_PI, state->renderer->device
-    );
-    if (state->meshes[GEO_CONE].vertex_buffer == NULL) return SDL_APP_FAILURE;
-    state->meshes[GEO_CYLINDER] = create_cylinder_mesh (
-        0.5f, 0.5f, 1.0f, 16, 1, false, 0.0f, 2.0f * (float) M_PI, state->renderer->device
-    );
-    if (state->meshes[GEO_CYLINDER].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    // cone
+    PAL_ConeMeshCreateInfo cone_info = {
+        .radius = 0.5f,
+        .height = 1.0f,
+        .radial_segments = 16,
+        .height_segments = 1,
+        .open_ended = false,
+        .theta_start = 0.0f,
+        .theta_length = 2.0f * (float) M_PI,
+        .device = state->renderer->device
+    };
+    state->meshes[GEO_CONE] = PAL_CreateConeMesh (&cone_info);
+    if (state->meshes[GEO_CONE] == NULL) return SDL_APP_FAILURE;
+
+    // cylinder
+    PAL_CylinderMeshCreateInfo cylinder_info = {
+        .radius_top = 0.5f,
+        .radius_bottom = 0.5f,
+        .height = 1.0f,
+        .radial_segments = 16,
+        .height_segments = 1,
+        .open_ended = false,
+        .theta_start = 0.0f,
+        .theta_length = 2.0f * (float) M_PI,
+        .device = state->renderer->device
+    };
+    state->meshes[GEO_CYLINDER] = PAL_CreateCylinderMesh (&cylinder_info);
+    if (state->meshes[GEO_CYLINDER] == NULL) return SDL_APP_FAILURE;
+
     state->meshes[GEO_SPHERE] = create_sphere_mesh (
         0.5f, 32, 16, 0.0f, (float) M_PI * 2.0f, 0.0f, (float) M_PI,
         state->renderer->device

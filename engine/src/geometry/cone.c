@@ -1,19 +1,11 @@
 #include <geometry/cone.h>
 #include <geometry/cylinder.h>
 
-PAL_MeshComponent create_cone_mesh (
-    float radius,
-    float height,
-    Uint32 radial_segments,
-    Uint32 height_segments,
-    bool open_ended,
-    float theta_start,
-    float theta_length,
-    SDL_GPUDevice* device
-) {
+PAL_MeshComponent PAL_CreateConeMesh (static PAL_ConeMeshCreateInfo* info) {
     // cylinder returns normals
-    return create_cylinder_mesh (
-        0.0f, radius, height, radial_segments, height_segments, open_ended,
-        theta_start, theta_length, device
+    return PAL_CreateCylinderMesh (
+        0.0f, info->radius, info->height, info->radial_segments,
+        info->height_segments, info->open_ended, info->theta_start,
+        info->theta_length, info->device
     );
 }
