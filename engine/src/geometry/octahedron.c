@@ -46,12 +46,12 @@ PAL_CreateOctahedronMesh (static PAL_OctahedronMeshCreateInfo* info) {
 
     Uint64 vertices_size = sizeof (vertices);
     SDL_GPUBuffer* vbo =
-        PAL_UploadVertices (info->device, vertices, vertices_size, &vbo);
+        PAL_UploadVertices (info->device, vertices, vertices_size);
     if (vbo == NULL) return NULL;
 
     Uint64 indices_size = sizeof (indices);
     SDL_GPUBuffer* ibo =
-        PAL_UploadIndices (info->device, indices, indices_size, &ibo);
+        PAL_UploadIndices (info->device, indices, indices_size);
     if (ibo == NULL) {
         SDL_ReleaseGPUBuffer (info->device, vbo);
         return NULL;

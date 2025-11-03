@@ -65,13 +65,13 @@ PAL_CreateIcosahedronMesh (static PAL_IcosahedronMeshCreateInfo* info) {
 
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
     SDL_GPUBuffer* vbo =
-        PAL_UploadVertices (info->device, vertices, vertices_size, &vbo);
+        PAL_UploadVertices (info->device, vertices, vertices_size);
     free (vertices);
     if (vbo == NULL) return NULL;
 
     Uint64 indices_size = 60 * sizeof (Uint32);
     SDL_GPUBuffer* ibo =
-        PAL_UploadIndices (info->device, standard_indices, indices_size, &ibo);
+        PAL_UploadIndices (info->device, standard_indices, indices_size);
     if (ibo == NULL) {
         SDL_ReleaseGPUBuffer (info->device, vbo);
         return NULL;

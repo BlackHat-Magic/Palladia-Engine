@@ -64,7 +64,7 @@ PAL_MeshComponent* PAL_CreateBoxMesh (PAL_BoxMeshCreateInfo* info) {
 
     Uint64 indices_size = sizeof (indices);
     SDL_GPUBuffer* ibo =
-        PAL_UploadIndices (info->device, indices, indices_size, &ibo);
+        PAL_UploadIndices (info->device, indices, indices_size);
     if (ibo == NULL) {
         SDL_ReleaseGPUBuffer (info->device, vbo);
         return NULL; // caller handles logging

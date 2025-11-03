@@ -3,19 +3,17 @@
 #include <SDL3/SDL_gpu.h>
 
 // Returns 0 on success, 1 on failure
-Uint32 PAL_UploadVertices (
+SDL_GPUBuffer* PAL_UploadVertices (
     SDL_GPUDevice* device,
     const void* vertices,
     Uint64 vertices_size,
-    SDL_GPUBuffer** vbo_out
 );
 
 // Returns 0 on success, 1 on failure
-Uint32 PAL_UploadIndices (
+SDL_GPUBuffer* PAL_UploadIndices (
     SDL_GPUDevice* device,
     const void* indices,
     Uint64 indices_size,
-    SDL_GPUBuffer** ibo_out
 );
 
 void PAL_ComputeNormals (

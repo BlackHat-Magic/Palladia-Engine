@@ -85,7 +85,7 @@ PAL_MeshComponent PAL_CreateLatheMesh (static PAL_LatheMeshCreateInfo* info) {
     // Upload to GPU
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
     SDL_GPUBuffer* vbo =
-        PAL_UploadVertices (device, vertices, vertices_size, &vbo);
+        PAL_UploadVertices (device, vertices, vertices_size);
     free (vertices);
     if (vbo == NULL) {
         free (indices);
@@ -94,7 +94,7 @@ PAL_MeshComponent PAL_CreateLatheMesh (static PAL_LatheMeshCreateInfo* info) {
 
     Uint64 indices_size = num_indices * sizeof (Uint32);
     SDL_GPUBuffer* ibo =
-        PAL_UploadIndices (device, indices, indices_size, &ibo);
+        PAL_UploadIndices (device, indices, indices_size);
     free (indices);
     if (ibo == NULL) {
         SDL_ReleaseGPUBuffer (device, vbo);
