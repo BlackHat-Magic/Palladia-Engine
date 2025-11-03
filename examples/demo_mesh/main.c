@@ -236,8 +236,17 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     state->meshes[GEO_ICOSAHEDRON] = create_icosahedron_mesh (0.5f, state->renderer->device);
     if (state->meshes[GEO_ICOSAHEDRON].vertex_buffer == NULL) return SDL_APP_FAILURE;
 
+    // capsule
+    PAL_CapsuleMeshCreateInfo capsule_info = {
+        .radius = 0.5f,
+        .height = 1.0f,
+        .cap_segments = 8,
+        .radial_segments = 16,
+        .device = state->renderer->device,
+    };
+    state->meshes[GEO_CAPSULE] = PAL_CreateCapsuleMesh (&capsule_info);
+
     // round bois
-    state->meshes[GEO_CAPSULE] = create_capsule_mesh (0.5f, 1.0f, 8, 16, state->renderer->device);
     if (state->meshes[GEO_CAPSULE].vertex_buffer == NULL) return SDL_APP_FAILURE;
     state->meshes[GEO_CONE] = create_cone_mesh (
         0.5f, 1.0f, 16, 1, false, 0.0f, 2.0f * (float) M_PI, state->renderer->device

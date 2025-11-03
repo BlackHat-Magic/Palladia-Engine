@@ -35,13 +35,13 @@ PAL_MeshComponent create_octahedron_mesh (float radius, SDL_GPUDevice* device) {
         vertices[i * 8 + 7] = v;
     }
 
-    Uint16 indices[] = {0, 2, 1, // Clockwise for outwards normal
+    Uint32 indices[] = {0, 2, 1, // Clockwise for outwards normal
                         0, 3, 2, 0, 4, 3, 0, 1, 4, 5, 1,
                         2, 5, 2, 3, 5, 3, 4, 5, 4, 1};
 
     // Compute normals
-    compute_vertex_normals (
-        vertices, num_vertices, indices, sizeof (indices) / sizeof (Uint16), 8,
+    PAL_ComputeNormals (
+        vertices, num_vertices, indices, sizeof (indices) / sizeof (Uint32), 8,
         0, 3
     );
 
@@ -62,7 +62,7 @@ PAL_MeshComponent create_octahedron_mesh (float radius, SDL_GPUDevice* device) {
         (PAL_MeshComponent) {.vertex_buffer = vbo,
                          .num_vertices = (Uint32) num_vertices,
                          .index_buffer = ibo,
-                         .num_indices = sizeof (indices) / sizeof (Uint16),
+                         .num_indices = sizeof (indices) / sizeof (Uint32),
                          .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
 
     return out_mesh;

@@ -15,13 +15,6 @@ create_circle_mesh (float radius, int segments, SDL_GPUDevice* device) {
     int num_vertices = segments + 1; // Center + ring
     int num_indices = segments * 3;  // One triangle per segment
 
-    // Check for Uint16 overflow (max 65535 verts); extend to Uint32 if needed
-    // later
-    if (num_vertices > 65535) {
-        SDL_Log ("Circle mesh too large for Uint16 indices");
-        return null_mesh;
-    }
-
     float* vertices = (float*) malloc (
         num_vertices * 8 * sizeof (float)
     ); // pos.x,y,z + normal.x,y,z + uv.u,v
@@ -30,7 +23,7 @@ create_circle_mesh (float radius, int segments, SDL_GPUDevice* device) {
         return null_mesh;
     }
 
-    Uint16* indices = (Uint16*) malloc (num_indices * sizeof (Uint16));
+    Uint32* indices = (Uint32*) malloc (num_indices * sizeof (Uint32));
     if (!indices) {
         SDL_Log ("Failed to allocate indices for circle mesh");
         free (vertices);
@@ -70,9 +63,9 @@ create_circle_mesh (float radius, int segments, SDL_GPUDevice* device) {
     int index_idx = 0;
     for (int i = 0; i < segments; i++) {
         indices[index_idx++] = 0;                // Center
-        indices[index_idx++] = (Uint16) (i + 1); // Current ring vertex
+        indices[index_idx++] = (Uint32) (i + 1); // Current ring vertex
         indices[index_idx++] =
-            (Uint16) ((i + 1) % segments + 1); // Next ring vertex (wrap around)
+            (Uint32) ((i + 1) % segments + 1); // Next ring vertex (wrap around)
     }
 
     // Upload to GPU
@@ -86,7 +79,7 @@ create_circle_mesh (float radius, int segments, SDL_GPUDevice* device) {
     }
 
     SDL_GPUBuffer* ibo = NULL;
-    Uint64 indices_size = num_indices * sizeof (Uint16);
+    Uint64 indices_size = num_indices * sizeof (Uint32);
     int ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
     free (indices);
     if (ibo_failed) {

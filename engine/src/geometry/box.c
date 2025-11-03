@@ -45,7 +45,7 @@ PAL_MeshComponent* PAL_CreateBoxMesh (PAL_BoxMeshCreateInfo* info) {
     };
 
     // 36 indices: 6 per face (2 triangles each), clockwise winding
-    Uint16 indices[] = {
+    Uint32 indices[] = {
         // Front
         0, 2, 1, 2, 0, 3,
         // Back (unchanged)
@@ -60,7 +60,7 @@ PAL_MeshComponent* PAL_CreateBoxMesh (PAL_BoxMeshCreateInfo* info) {
         20, 23, 22, 22, 21, 20
     };
 
-    compute_vertex_normals (vertices, 24, indices, 36, 8, 0, 3);
+    PAL_ComputeNormals (vertices, 24, indices, 36, 8, 0, 3);
 
     Uint64 vertices_size = sizeof (vertices);
     SDL_GPUBuffer* vbo =

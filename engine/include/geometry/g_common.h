@@ -18,10 +18,10 @@ int PAL_UploadIndices (
     SDL_GPUBuffer** ibo_out
 );
 
-void compute_vertex_normals (
+void PAL_ComputeNormals (
     float* vertices,
     int num_vertices,
-    const Uint16* indices,
+    const Uint32* indices,
     int num_indices,
     int stride,
     int pos_offset,

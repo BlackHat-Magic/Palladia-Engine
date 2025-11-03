@@ -54,7 +54,7 @@ PAL_MeshComponent create_dodecahedron_mesh (float radius, SDL_GPUDevice* device)
     }
 
     int num_indices = 108;
-    Uint16 indices[108] = {
+    Uint32 indices[108] = {
         1, 8,  0, 0, 12, 13, 13, 1, 0, 4, 9,  5, 5, 15, 14, 14, 4, 5,
         2, 10, 3, 3, 13, 12, 12, 2, 3, 7, 11, 6, 6, 14, 15, 15, 7, 6,
         2, 12, 0, 0, 16, 17, 17, 2, 0, 1, 13, 3, 3, 19, 18, 18, 1, 3,
@@ -64,7 +64,7 @@ PAL_MeshComponent create_dodecahedron_mesh (float radius, SDL_GPUDevice* device)
     };
 
     // Compute normals
-    compute_vertex_normals (
+    PAL_ComputeNormals (
         vertices, num_vertices, indices, num_indices, 8, 0, 3
     );
 
@@ -75,7 +75,7 @@ PAL_MeshComponent create_dodecahedron_mesh (float radius, SDL_GPUDevice* device)
     if (vbo_failed) return (PAL_MeshComponent) {0};
 
     SDL_GPUBuffer* ibo = NULL;
-    Uint64 indices_size = num_indices * sizeof (Uint16);
+    Uint64 indices_size = num_indices * sizeof (Uint32);
     int ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
     if (ibo_failed) {
         SDL_ReleaseGPUBuffer (device, vbo);

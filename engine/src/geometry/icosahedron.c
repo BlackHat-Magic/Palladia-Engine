@@ -48,7 +48,7 @@ PAL_MeshComponent create_icosahedron_mesh (float radius, SDL_GPUDevice* device) 
         vertices[vertex_idx++] = v;
     }
 
-    Uint16 indices[] = {
+    Uint32 indices[] = {
         11, 5, 0, 5, 1, 0, 1, 7, 0, 7, 10, 0, 10, 11, 0, 5, 9, 1, 11, 4, 5, 10,
         2, 11, 10, 2, 7, // Fixed from original (was 10, 2,
                          // 11 but repeated; assuming
@@ -63,14 +63,14 @@ PAL_MeshComponent create_icosahedron_mesh (float radius, SDL_GPUDevice* device) 
     // 60 indices but listed less); assuming standard icosahedron indices
     // Standard icosahedron has 20 faces, 60 indices. Here using a corrected
     // list:
-    Uint16 standard_indices[60] = {0,  5,  1,  0, 1, 7,  0, 7,  10, 0,  10, 11,
+    Uint32 standard_indices[60] = {0,  5,  1,  0, 1, 7,  0, 7,  10, 0,  10, 11,
                                    0,  11, 5,  1, 5, 9,  5, 11, 4,  11, 10, 2,
                                    10, 7,  6,  7, 1, 8,  3, 9,  4,  3,  4,  2,
                                    3,  2,  6,  3, 6, 8,  3, 8,  9,  4,  9,  5,
                                    2,  4,  11, 6, 2, 10, 8, 6,  7,  9,  8,  1};
 
     // Compute normals using standard_indices
-    compute_vertex_normals (
+    PAL_ComputeNormals (
         vertices, num_vertices, standard_indices, 60, 8, 0, 3
     );
 
@@ -81,7 +81,7 @@ PAL_MeshComponent create_icosahedron_mesh (float radius, SDL_GPUDevice* device) 
     if (vbo_failed) return null_mesh;
 
     SDL_GPUBuffer* ibo = NULL;
-    Uint64 indices_size = 60 * sizeof (Uint16);
+    Uint64 indices_size = 60 * sizeof (Uint32);
     int ibo_failed =
         PAL_UploadIndices (device, standard_indices, indices_size, &ibo);
     if (ibo_failed) {

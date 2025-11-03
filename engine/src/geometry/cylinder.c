@@ -59,7 +59,7 @@ PAL_MeshComponent create_cylinder_mesh (
         points[idx++] = (vec2) {0.0f, half_height};
     }
 
-    out_mesh = create_lathe_mesh (
+    out_mesh = PAL_CreateLatheMesh (
         points, idx, radial_segments, theta_start, theta_length, device
     );
     free (points);

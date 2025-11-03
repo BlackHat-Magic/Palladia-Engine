@@ -5,48 +5,25 @@
 #include <geometry/lathe.h>
 #include <math/matrix.h>
 
-PAL_MeshComponent create_lathe_mesh (
-    vec2* points,
-    int num_points,
-    int phi_segments,
-    float phi_start,
-    float phi_length,
-    SDL_GPUDevice* device
-) {
+PAL_MeshComponent PAL_CreateLatheMesh (static PAL_LatheMeshCreateInfo* info) {
     PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
-    if (num_points < 2) {
-        SDL_Log ("Lathe requires at least 2 points");
-        return null_mesh;
-    }
-    if (phi_segments < 3) {
-        SDL_Log ("Lathe requires at least 3 phi segments");
-        return null_mesh;
-    }
+    if (info->num_points < 2) return NULL;
+    if (phi_segments < 3) return NULL;
 
-    int num_phi = phi_segments + 1; // Rings closed
-    int num_vertices = num_points * num_phi;
-
-    // Check for Uint16 overflow (max 65535 verts); extend to Uint32 if needed
-    // later
-    if (num_vertices > 65535) {
-        SDL_Log ("Lathe mesh too large for Uint16 indices");
-        return null_mesh;
-    }
+    Uint32 num_phi = phi_segments + 1; // Rings closed
+    Uint32 num_vertices = num_points * num_phi;
 
     float* vertices = (float*) malloc (
         num_vertices * 8 * sizeof (float)
     ); // pos.x,y,z + normal.x,y,z + uv.u,v
-    if (!vertices) {
-        SDL_Log ("Failed to allocate vertices for lathe mesh");
-        return null_mesh;
-    }
+    if (vertices == NULL) return NULL
 
     // Generate vertices
-    int vertex_idx = 0;
-    for (int i = 0; i < num_points; i++) {
+    Uint32 vertex_idx = 0;
+    for (Uint32 i = 0; i < num_points; i++) {
         float u = (float) i / (float) (num_points - 1); // Axial UV
 
-        for (int j = 0; j < num_phi; j++) {
+        for (Uint32 j = 0; j < num_phi; j++) {
             float phi_frac = (float) j / (float) phi_segments;
             float phi = phi_start + phi_frac * phi_length;
             float cos_phi = cosf (phi);
@@ -74,22 +51,21 @@ PAL_MeshComponent create_lathe_mesh (
     }
 
     // Generate indices (quads between rings, flipped winding for outward faces)
-    int num_indices = (num_points - 1) * phi_segments * 6;
-    Uint16* indices = (Uint16*) malloc (num_indices * sizeof (Uint16));
-    if (!indices) {
-        SDL_Log ("Failed to allocate indices for lathe mesh");
+    Uint32 num_indices = (num_points - 1) * phi_segments * 6;
+    Uint32* indices = (Uint32*) malloc (num_indices * sizeof (Uint32));
+    if (indices == NULL) {
         free (vertices);
-        return null_mesh;
+        return NULL;
     }
 
-    int index_idx = 0;
-    for (int i = 0; i < num_points - 1; i++) {
-        for (int j = 0; j < phi_segments; j++) {
-            Uint16 a = (Uint16) (i * num_phi + j);
-            Uint16 b =
-                (Uint16) (i * num_phi + (j + 1) % phi_segments); // Wrap phi
-            Uint16 c = (Uint16) ((i + 1) * num_phi + (j + 1) % phi_segments);
-            Uint16 d = (Uint16) ((i + 1) * num_phi + j);
+    Uint32 index_idx = 0;
+    for (Uint32 i = 0; i < num_points - 1; i++) {
+        for (Uint32 j = 0; j < phi_segments; j++) {
+            Uint32 a = (Uint32) (i * num_phi + j);
+            Uint32 b =
+                (Uint32) (i * num_phi + (j + 1) % phi_segments); // Wrap phi
+            Uint32 c = (Uint32) ((i + 1) * num_phi + (j + 1) % phi_segments);
+            Uint32 d = (Uint32) ((i + 1) * num_phi + j);
 
             // Flipped winding: a -> c -> b and a -> d -> c (counterclockwise if
             // original was clockwise)
@@ -104,35 +80,36 @@ PAL_MeshComponent create_lathe_mesh (
     }
 
     // Compute normals
-    compute_vertex_normals (
+    PAL_ComputeNormals (
         vertices, num_vertices, indices, num_indices, 8, 0, 3
     );
 
     // Upload to GPU
-    SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
-    int vbo_failed = PAL_UploadVertices (device, vertices, vertices_size, &vbo);
+    SDL_GPUBuffer* vbo = PAL_UploadVertices (device, vertices, vertices_size, &vbo);
     free (vertices);
-    if (vbo_failed) {
+    if (vbo == NULL) {
         free (indices);
-        return null_mesh; // Logging handled in PAL_UploadVertices
+        return NULL;
     }
 
-    SDL_GPUBuffer* ibo = NULL;
-    Uint64 indices_size = num_indices * sizeof (Uint16);
-    int ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
+    Uint64 indices_size = num_indices * sizeof (Uint32);
+    SDL_GPUBuffer* ibo = PAL_UploadIndices (device, indices, indices_size, &ibo);
     free (indices);
-    if (ibo_failed) {
+    if (ibo == NULL) {
         SDL_ReleaseGPUBuffer (device, vbo);
-        return null_mesh; // Logging handled in PAL_UploadIndices
+        return NULL;
     }
-
-    PAL_MeshComponent out_mesh =
-        (PAL_MeshComponent) {.vertex_buffer = vbo,
-                         .num_vertices = (Uint32) num_vertices,
-                         .index_buffer = ibo,
-                         .num_indices = (Uint32) num_indices,
-                         .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
+    
+    PAL_MeshComponent* mesh = malloc (sizeof (PAL_MeshComponent));
+    if (mesh == NULL) return NULL;
+    *mesh = (PAL_MeshComponent) {
+        .vertex_buffer = vbo,
+        .num_vertices = num_vertices,
+        .index_buffer = ibo,
+        .num_indices = num_indices,
+        .index_size = SDL_GPU_INDEXELEMENTSIZE_32BIT
+    };
 
     return out_mesh;
 }

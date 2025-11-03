@@ -36,7 +36,7 @@ PAL_MeshComponent create_tetrahedron_mesh (float radius, SDL_GPUDevice* device) 
 
     // 12 indices (4 triangles, clockwise)
     const int num_indices = 12;
-    Uint16 indices[] = {
+    Uint32 indices[] = {
         0, 1, 2, // Face 0
         0, 3, 1, // Face 1
         0, 2, 3, // Face 2
@@ -44,7 +44,7 @@ PAL_MeshComponent create_tetrahedron_mesh (float radius, SDL_GPUDevice* device) 
     };
 
     // Compute normals
-    compute_vertex_normals (
+    PAL_ComputeNormals (
         vertices, num_vertices, indices, num_indices, 8, 0, 3
     );
 
@@ -54,7 +54,7 @@ PAL_MeshComponent create_tetrahedron_mesh (float radius, SDL_GPUDevice* device) 
     if (vbo_failed) return null_mesh;
 
     SDL_GPUBuffer* ibo = NULL;
-    Uint64 indices_size = num_indices * sizeof (Uint16);
+    Uint64 indices_size = num_indices * sizeof (Uint32);
     int ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
     if (ibo_failed) {
         SDL_ReleaseGPUBuffer (device, vbo);

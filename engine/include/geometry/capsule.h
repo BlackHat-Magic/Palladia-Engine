@@ -2,10 +2,12 @@
 
 #include <ecs/ecs.h>
 
-PAL_MeshComponent create_capsule_mesh (
+PAL_MeshComponent* PAL_CreateCapsuleMesh (static PAL_CapsuleMeshCreateInfo* info);
+
+typedef struct {
     float radius,
     float height,
-    int cap_segments,
-    int radial_segments,
+    Uint32 cap_segments,
+    Uint32 radial_segments,
     SDL_GPUDevice* device
-);
+} PAL_CapsuleMeshCreateInfo;

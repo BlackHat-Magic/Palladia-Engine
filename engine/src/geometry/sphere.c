@@ -40,7 +40,7 @@ PAL_MeshComponent create_sphere_mesh (
     }
 
     // lathe returns normals
-    PAL_MeshComponent mesh = create_lathe_mesh (
+    PAL_MeshComponent mesh = PAL_CreateLatheMesh (
         points, num_points, width_segments, phi_start, phi_length, device
     );
     free (points);

@@ -17,13 +17,6 @@ PAL_MeshComponent create_plane_mesh (
     int num_vertices = (width_segments + 1) * (height_segments + 1);
     int num_indices = width_segments * height_segments * 6;
 
-    // Check for Uint16 overflow (max 65535 verts); fallback to Uint32 if needed
-    // For now, assume small segments; add Uint32 support later if required
-    if (num_vertices > 65535) {
-        SDL_Log ("Plane mesh too large for Uint16 indices");
-        return null_mesh;
-    }
-
     float* vertices = (float*) malloc (
         num_vertices * 8 * sizeof (float)
     ); // pos.x,y,z + normal.x,y,z + uv.u,v
@@ -32,7 +25,7 @@ PAL_MeshComponent create_plane_mesh (
         return null_mesh;
     }
 
-    Uint16* indices = (Uint16*) malloc (num_indices * sizeof (Uint16));
+    Uint32* indices = (Uint32*) malloc (num_indices * sizeof (Uint32));
     if (!indices) {
         SDL_Log ("Failed to allocate indices for plane mesh");
         free (vertices);
@@ -66,10 +59,10 @@ PAL_MeshComponent create_plane_mesh (
     int index_idx = 0;
     for (int iy = 0; iy < height_segments; iy++) {
         for (int ix = 0; ix < width_segments; ix++) {
-            Uint16 a = (Uint16) (iy * (width_segments + 1) + ix);
-            Uint16 b = (Uint16) (iy * (width_segments + 1) + ix + 1);
-            Uint16 c = (Uint16) ((iy + 1) * (width_segments + 1) + ix + 1);
-            Uint16 d = (Uint16) ((iy + 1) * (width_segments + 1) + ix);
+            Uint32 a = (Uint32) (iy * (width_segments + 1) + ix);
+            Uint32 b = (Uint32) (iy * (width_segments + 1) + ix + 1);
+            Uint32 c = (Uint32) ((iy + 1) * (width_segments + 1) + ix + 1);
+            Uint32 d = (Uint32) ((iy + 1) * (width_segments + 1) + ix);
 
             // Triangle 1: a -> b -> c (clockwise)
             indices[index_idx++] = a;
@@ -93,7 +86,7 @@ PAL_MeshComponent create_plane_mesh (
     }
 
     SDL_GPUBuffer* ibo = NULL;
-    Uint64 indices_size = num_indices * sizeof (Uint16);
+    Uint64 indices_size = num_indices * sizeof (Uint32);
     int ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
     free (indices);
     if (ibo_failed) {

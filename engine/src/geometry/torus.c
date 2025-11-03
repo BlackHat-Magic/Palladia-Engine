@@ -32,10 +32,6 @@ PAL_MeshComponent create_torus_mesh (
     int num_radial = radial_segments; // Always closed in radial direction
 
     int num_vertices = num_tubular * num_radial;
-    if (num_vertices > 65535) {
-        SDL_Log ("Torus mesh too large for Uint16 indices");
-        return null_mesh;
-    }
 
     float* vertices = (float*) malloc (
         num_vertices * 8 * sizeof (float)
@@ -87,7 +83,7 @@ PAL_MeshComponent create_torus_mesh (
     int num_u_loops = tubular_segments;
     int num_r_loops = radial_segments;
     int num_indices = num_u_loops * num_r_loops * 6;
-    Uint16* indices = (Uint16*) malloc (num_indices * sizeof (Uint16));
+    Uint32* indices = (Uint32*) malloc (num_indices * sizeof (Uint32));
     if (!indices) {
         SDL_Log ("Failed to allocate indices for torus mesh");
         free (vertices);
@@ -104,10 +100,10 @@ PAL_MeshComponent create_torus_mesh (
         for (int ra = 0; ra < num_r_loops; ra++) {
             int ra1 = (ra + 1) % radial_segments;
 
-            Uint16 a = (Uint16) (tu * num_radial + ra);
-            Uint16 b = (Uint16) (tu1 * num_radial + ra);
-            Uint16 c = (Uint16) (tu1 * num_radial + ra1);
-            Uint16 d = (Uint16) (tu * num_radial + ra1);
+            Uint32 a = (Uint32) (tu * num_radial + ra);
+            Uint32 b = (Uint32) (tu1 * num_radial + ra);
+            Uint32 c = (Uint32) (tu1 * num_radial + ra1);
+            Uint32 d = (Uint32) (tu * num_radial + ra1);
 
             // Clockwise winding for front-face (matches
             // SDL_GPU_FRONTFACE_CLOCKWISE)
@@ -132,7 +128,7 @@ PAL_MeshComponent create_torus_mesh (
     free (vertices);
 
     SDL_GPUBuffer* ibo = NULL;
-    Uint64 indices_size = num_indices * sizeof (Uint16);
+    Uint64 indices_size = num_indices * sizeof (Uint32);
     if (PAL_UploadIndices (device, indices, indices_size, &ibo)) {
         SDL_ReleaseGPUBuffer (device, vbo);
         free (indices);
