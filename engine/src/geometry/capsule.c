@@ -26,8 +26,7 @@ PAL_CreateCapsuleMesh (const PAL_CapsuleMeshCreateInfo* info) {
         idx++;
     }
 
-    Uint32 top_start =
-        (info->height <= 0.0f) ? info->cap_segments - 1 : info->cap_segments;
+    Uint32 top_start = (info->height <= 0.0f) ? info->cap_segments - 1 : info->cap_segments;
     for (Uint32 i = top_start; i >= 0; i--) {
         float theta =
             (float) i / (float) info->cap_segments * (float) M_PI * 0.5f;

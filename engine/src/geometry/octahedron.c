@@ -69,7 +69,7 @@ PAL_CreateOctahedronMesh (const PAL_OctahedronMeshCreateInfo* info) {
                              .num_vertices = num_vertices,
                              .index_buffer = ibo,
                              .num_indices = sizeof (indices) / sizeof (Uint32),
-                             .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
+                             .index_size = SDL_GPU_INDEXELEMENTSIZE_32BIT};
 
     return mesh;
 }

@@ -96,7 +96,7 @@ PAL_MeshComponent* PAL_CreatePlaneMesh (const PAL_PlaneMeshCreateInfo* info) {
                                  .num_vertices = num_vertices,
                                  .index_buffer = ibo,
                                  .num_indices = num_indices,
-                                 .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
+                                 .index_size = SDL_GPU_INDEXELEMENTSIZE_32BIT};
 
     return mesh;
 }
