@@ -5,69 +5,59 @@
 #include <geometry/torus.h>
 #include <math/matrix.h>
 
-PAL_MeshComponent create_torus_mesh (
-    float radius,
-    float tube_radius,
-    Uint32 radial_segments,
-    Uint32 tubular_segments,
-    float arc,
-    SDL_GPUDevice* device
+PAL_MeshComponent* PAL_CreateTorusMesh (
+    float info->radius,
+    float info->tube_radius,
+    Uint32 info->radial_segments,
+    Uint32 info->tubular_segments,
+    float info->arc,
+    SDL_GPUDevice * info->device
 ) {
-    PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
-    if (radial_segments < 3 || tubular_segments < 3) {
-        SDL_Log ("Torus must have at least 3 segments in each direction");
-        return null_mesh;
-    }
-    if (tube_radius <= 0.0f || radius <= 0.0f) {
-        SDL_Log ("Torus radii must be positive");
-        return null_mesh;
-    }
-    if (arc <= 0.0f || arc > 2.0f * (float) M_PI) {
-        SDL_Log ("Torus arc must be between 0 and 2*PI");
-        return null_mesh;
-    }
+    if (info->radial_segments < 3 || info->tubular_segments < 3) return NULL;
+    if (info->tube_radius <= 0.0f || info->radius <= 0.0f) return NULL;
+    if (info->arc <= 0.0f || info->arc > 2.0f * (float) M_PI) return NULL;
 
-    bool is_closed = fabsf (arc - 2.0f * (float) M_PI) < 1e-6f;
-    Uint32 num_tubular = tubular_segments + (is_closed ? 0 : 1);
-    Uint32 num_radial = radial_segments; // Always closed in radial direction
+    bool is_closed = fabsf (info->arc - 2.0f * (float) M_PI) < 1e-6f;
+    Uint32 num_tubular = info->tubular_segments + (is_closed ? 0 : 1);
+    Uint32 num_radial =
+        info->radial_segments; // Always closed in radial direction
 
     Uint32 num_vertices = num_tubular * num_radial;
 
     float* vertices = (float*) malloc (
         num_vertices * 8 * sizeof (float)
     ); // pos3 + norm3 + uv2
-    if (!vertices) {
-        SDL_Log ("Failed to allocate vertices for torus mesh");
-        return null_mesh;
-    }
+    if (vertices == NULL) return NULL;
 
     Uint32 vertex_idx = 0;
     for (Uint32 tu = 0; tu < num_tubular; tu++) {
-        float u = ((float) tu / (float) tubular_segments) * arc;
+        float u = ((float) tu / (float) info->tubular_segments) * info->arc;
         float cos_u = cosf (u);
         float sin_u = sinf (u);
 
         for (Uint32 ra = 0; ra < num_radial; ra++) {
-            float v =
-                ((float) ra / (float) radial_segments) * 2.0f * (float) M_PI;
+            float v = ((float) ra / (float) info->radial_segments) * 2.0f *
+                      (float) M_PI;
             float cos_v = cosf (v);
             float sin_v = sinf (v);
 
             // Position (hole along Y-axis to match previous orientation)
-            float x = (radius + tube_radius * cos_v) * cos_u;
-            float y = tube_radius * sin_v;
-            float z = (radius + tube_radius * cos_v) * sin_u;
+            float x = (info->radius + info->tube_radius * cos_v) * cos_u;
+            float y = info->tube_radius * sin_v;
+            float z = (info->radius + info->tube_radius * cos_v) * sin_u;
 
             // Tube center
-            vec3 tube_center = {radius * cos_u, 0.0f, radius * sin_u};
+            vec3 tube_center = {
+                info->radius * cos_u, 0.0f, info->radius * sin_u
+            };
 
             // Normal (direction from tube center to point)
             vec3 pos = {x, y, z};
             vec3 norm = vec3_normalize (vec3_sub (pos, tube_center));
 
             // UV
-            float uv_u = (float) tu / (float) tubular_segments;
-            float uv_v = (float) ra / (float) radial_segments;
+            float uv_u = (float) tu / (float) info->tubular_segments;
+            float uv_v = (float) ra / (float) info->radial_segments;
 
             vertices[vertex_idx++] = x;
             vertices[vertex_idx++] = y;
@@ -80,25 +70,24 @@ PAL_MeshComponent create_torus_mesh (
         }
     }
 
-    Uint32 num_u_loops = tubular_segments;
-    Uint32 num_r_loops = radial_segments;
+    Uint32 num_u_loops = info->tubular_segments;
+    Uint32 num_r_loops = info->radial_segments;
     Uint32 num_indices = num_u_loops * num_r_loops * 6;
     Uint32* indices = (Uint32*) malloc (num_indices * sizeof (Uint32));
-    if (!indices) {
-        SDL_Log ("Failed to allocate indices for torus mesh");
+    if (indices == NULL) {
         free (vertices);
-        return null_mesh;
+        return NULL;
     }
 
     Uint32 index_idx = 0;
     for (Uint32 tu = 0; tu < num_u_loops; tu++) {
         Uint32 tu1 = tu + 1;
         if (is_closed) {
-            tu1 %= tubular_segments;
+            tu1 %= info->tubular_segments;
         }
 
         for (Uint32 ra = 0; ra < num_r_loops; ra++) {
-            Uint32 ra1 = (ra + 1) % radial_segments;
+            Uint32 ra1 = (ra + 1) % info->radial_segments;
 
             Uint32 a = tu * num_radial + ra;
             Uint32 b = tu1 * num_radial + ra;
@@ -118,30 +107,37 @@ PAL_MeshComponent create_torus_mesh (
     }
 
     // Upload to GPU
-    SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
-    if (PAL_UploadVertices (device, vertices, vertices_size, &vbo)) {
+    SDL_GPUBuffer* vbo =
+        PAL_UploadVertices (info->device, vertices, vertices_size, &vbo);
+    if (vbo == NULL) {
         free (vertices);
         free (indices);
-        return null_mesh; // Logging handled in PAL_UploadVertices
+        return NULL;
     }
     free (vertices);
 
-    SDL_GPUBuffer* ibo = NULL;
     Uint64 indices_size = num_indices * sizeof (Uint32);
-    if (PAL_UploadIndices (device, indices, indices_size, &ibo)) {
-        SDL_ReleaseGPUBuffer (device, vbo);
+    SDL_GPUBuffer* ibo =
+        PAL_UploadIndices (info->device, indices, indices_size, &ibo);
+    if (ibo == NULL) {
+        SDL_ReleaseGPUBuffer (info->device, vbo);
         free (indices);
-        return null_mesh; // Logging handled in PAL_UploadIndices
+        return NULL;
     }
     free (indices);
 
-    PAL_MeshComponent out_mesh =
-        (PAL_MeshComponent) {.vertex_buffer = vbo,
-                             .num_vertices = num_vertices,
-                             .index_buffer = ibo,
-                             .num_indices = num_indices,
-                             .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
+    PAL_MeshComponent* mesh = malloc (sizeof (PAL_MeshComponent));
+    if (mesh == NULL) {
+        SDL_ReleaseGPUBuffer (info->device, vbo);
+        SDL_ReleaseGPUBuffer (info->device, ibo);
+        return NULL;
+    }
+    *mesh = (PAL_MeshComponent) {.vertex_buffer = vbo,
+                                 .num_vertices = num_vertices,
+                                 .index_buffer = ibo,
+                                 .num_indices = num_indices,
+                                 .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
 
-    return out_mesh;
+    return mesh;
 }

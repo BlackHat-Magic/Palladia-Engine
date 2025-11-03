@@ -334,9 +334,16 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
     state->meshes[GEO_SPHERE] = PAL_CreateSphereMesh (&sphere_info);
     if (state->meshes[GEO_SPHERE] == NULL) return SDL_APP_FAILURE;
 
-    state->meshes[GEO_TORUS] = create_torus_mesh (
-        0.5f, 0.2f, 16, 32, (float) M_PI * 2.0f, state->renderer->device
-    );
+    // torus
+    PAL_TorusMeshCreateInfo torus_info = {
+        .radius = 0.5f,
+        .tube_radius = 0.2f,
+        .radial_segments = 16,
+        .tubular_segments = 32,
+        .arc = (float) M_PI * 2.0f,
+        .device = state->renderer->device
+    };
+    state->meshes[GEO_TORUS] = PAL_CreateTorusMesh (&torus_info);
     if (state->meshes[GEO_TORUS].vertex_buffer == NULL) return SDL_APP_FAILURE;
 
     // add mesh
