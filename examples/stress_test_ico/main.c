@@ -147,7 +147,7 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
                 Entity ico = create_entity ();
                 icosahedrons[(i + 10) * 400 + (j + 10) * 20 + (k + 10)] = ico;
                 PAL_MeshComponent icosahedron_mesh =
-                    create_icosahedron_mesh (0.5, state->device);
+                    PAL_CreateIcosahedronMesh (0.5, state->device);
                 if (icosahedron_mesh.vertex_buffer == NULL)
                     return SDL_APP_FAILURE;
                 PAL_AddMeshComponent (ico, icosahedron_mesh);

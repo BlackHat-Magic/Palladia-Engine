@@ -12,14 +12,14 @@ SDL_GPUBuffer* PAL_UploadVertices (
     Uint64 vertices_size,
 ) {
     SDL_GPUBufferCreateInfo vbo_info = {
-        .size = (Uint32) vertices_size,
+        .size = vertices_size,
         .usage = SDL_GPU_BUFFERUSAGE_VERTEX
     };
     SDL_GPUBuffer* vbo = SDL_CreateGPUBuffer (device, &vbo_info);
     if (vbo == NULL) return NULL;
 
     SDL_GPUTransferBufferCreateInfo tinfo = {
-        .size = (Uint32) vertices_size,
+        .size = vertices_size,
         .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD
     };
     SDL_GPUTransferBuffer* tbuf = SDL_CreateGPUTransferBuffer (device, &tinfo);
@@ -57,7 +57,7 @@ SDL_GPUBuffer* PAL_UploadVertices (
         .offset = 0
     };
     SDL_GPUBufferRegion dst_reg =
-        {.buffer = vbo, .offset = 0, .size = (Uint32) vertices_size};
+        {.buffer = vbo, .offset = 0, .size = vertices_size};
     SDL_UploadToGPUBuffer (copy_pass, &src_loc, &dst_reg, false);
     SDL_EndGPUCopyPass (copy_pass);
     SDL_SubmitGPUCommandBuffer (cmd);
@@ -73,14 +73,14 @@ SDL_GPUBuffer* PAL_UploadIndices (
     Uint64 indices_size,
 ) {
     SDL_GPUBufferCreateInfo ibo_info = {
-        .size = (Uint32) indices_size,
+        .size = indices_size,
         .usage = SDL_GPU_BUFFERUSAGE_INDEX
     };
     SDL_GPUBuffer* ibo = SDL_CreateGPUBuffer (device, &ibo_info);
     if (ibo == NULL) return NULL;
 
     SDL_GPUTransferBufferCreateInfo tinfo = {
-        .size = (Uint32) indices_size,
+        .size = indices_size,
         .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD
     };
     SDL_GPUTransferBuffer* tbuf = SDL_CreateGPUTransferBuffer (device, &tinfo);
@@ -118,7 +118,7 @@ SDL_GPUBuffer* PAL_UploadIndices (
         .offset = 0
     };
     SDL_GPUBufferRegion dst_reg =
-        {.buffer = ibo, .offset = 0, .size = (Uint32) indices_size};
+        {.buffer = ibo, .offset = 0, .size = indices_size};
     SDL_UploadToGPUBuffer (copy_pass, &src_loc, &dst_reg, false);
     SDL_EndGPUCopyPass (copy_pass);
     SDL_SubmitGPUCommandBuffer (cmd);

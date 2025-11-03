@@ -1,5 +1,9 @@
 #pragma once
 
 #include <ecs/ecs.h>
+#include <geometry/g_common.h>
 
-PAL_MeshComponent create_icosahedron_mesh (float radius, SDL_GPUDevice* device);
+#define PAL_IcosahedronMeshCreateInfo PAL_PlatonicMeshCreateInfo
+
+PAL_MeshComponent*
+PAL_CreateIcosahedronMesh (static PAL_IcosahedronMeshCreateInfo* info);

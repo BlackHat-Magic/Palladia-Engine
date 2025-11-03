@@ -62,11 +62,10 @@ PAL_MeshComponent PAL_CreateLatheMesh (static PAL_LatheMeshCreateInfo* info) {
     Uint32 index_idx = 0;
     for (Uint32 i = 0; i < num_points - 1; i++) {
         for (Uint32 j = 0; j < phi_segments; j++) {
-            Uint32 a = (Uint32) (i * num_phi + j);
-            Uint32 b =
-                (Uint32) (i * num_phi + (j + 1) % phi_segments); // Wrap phi
-            Uint32 c = (Uint32) ((i + 1) * num_phi + (j + 1) % phi_segments);
-            Uint32 d = (Uint32) ((i + 1) * num_phi + j);
+            Uint32 a = i * num_phi + j;
+            Uint32 b = i * num_phi + (j + 1) % phi_segments; // Wrap phi
+            Uint32 c = (i + 1) * num_phi + (j + 1) % phi_segments;
+            Uint32 d = (i + 1) * num_phi + j;
 
             // Flipped winding: a -> c -> b and a -> d -> c (counterclockwise if
             // original was clockwise)

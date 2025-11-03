@@ -1,12 +1,11 @@
 #include <math.h>
 
 #include <ecs/ecs.h>
-#include <geometry/g_common.h>
 #include <geometry/octahedron.h>
 #include <math/matrix.h>
 
-PAL_MeshComponent create_octahedron_mesh (float radius, SDL_GPUDevice* device) {
-    PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
+PAL_MeshComponent*
+PAL_CreateOctahedronMesh (static PAL_OctahedronMeshCreateInfo* info) {
     const Uint32 num_vertices = 6;
     float vertices[6 * 8] = {0};
     vec3 pos[6] = {
@@ -20,7 +19,7 @@ PAL_MeshComponent create_octahedron_mesh (float radius, SDL_GPUDevice* device) {
 
     for (Uint32 i = 0; i < 6; i++) {
         pos[i] = vec3_normalize (pos[i]);
-        pos[i] = vec3_scale (pos[i], radius);
+        pos[i] = vec3_scale (pos[i], info->radius);
         vertices[i * 8 + 0] = pos[i].x;
         vertices[i * 8 + 1] = pos[i].y;
         vertices[i * 8 + 2] = pos[i].z;
@@ -45,26 +44,31 @@ PAL_MeshComponent create_octahedron_mesh (float radius, SDL_GPUDevice* device) {
         0, 3
     );
 
-    SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = sizeof (vertices);
-    Uint32 vbo_failed =
-        PAL_UploadVertices (device, vertices, vertices_size, &vbo);
-    if (vbo_failed) return null_mesh;
+    SDL_GPUBuffer* vbo =
+        PAL_UploadVertices (info->device, vertices, vertices_size, &vbo);
+    if (vbo == NULL) return NULL;
 
-    SDL_GPUBuffer* ibo = NULL;
     Uint64 indices_size = sizeof (indices);
-    Uint32 ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
-    if (ibo_failed) {
-        SDL_ReleaseGPUBuffer (device, vbo);
-        return null_mesh;
+    SDL_GPUBuffer* ibo =
+        PAL_UploadIndices (info->device, indices, indices_size, &ibo);
+    if (ibo == NULL) {
+        SDL_ReleaseGPUBuffer (info->device, vbo);
+        return NULL;
     }
 
-    PAL_MeshComponent out_mesh =
+    PAL_MeshComponent* mesh = malloc (sizeof (PAL_MeshComponent));
+    if (mesh == NULL) {
+        SDL_ReleaseGPUBuffer (info->device, vbo);
+        SDL_ReleaseGPUBuffer (info->device, ibo);
+        return NULL;
+    }
+    *mesh =
         (PAL_MeshComponent) {.vertex_buffer = vbo,
-                             .num_vertices = (Uint32) num_vertices,
+                             .num_vertices = num_vertices,
                              .index_buffer = ibo,
                              .num_indices = sizeof (indices) / sizeof (Uint32),
                              .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
 
-    return out_mesh;
+    return mesh;
 }

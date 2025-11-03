@@ -3,11 +3,10 @@
 
 #include <ecs/ecs.h>
 #include <geometry/dodecahedron.h>
-#include <geometry/g_common.h>
 #include <math/matrix.h>
 
 PAL_MeshComponent*
-PAL_CreateDodecahedronMesh (static PAL_DodecahedronMeshCreateInfo* info) {
+PAL_CreateDodecahedronMesh (static PAL_PlatonicMeshCreateInfo* info) {
     float phi = (1.0f + sqrtf (5.0f)) / 2.0f;
     float phi_inv = 1.0f / phi;
 
@@ -85,9 +84,9 @@ PAL_CreateDodecahedronMesh (static PAL_DodecahedronMeshCreateInfo* info) {
         return NULL;
     }
     *mesh = (PAL_MeshComponent) {.vertex_buffer = vbo,
-                                 .num_vertices = (Uint32) num_vertices,
+                                 .num_vertices = num_vertices,
                                  .index_buffer = ibo,
-                                 .num_indices = (Uint32) num_indices,
+                                 .num_indices = num_indices,
                                  .index_size = SDL_GPU_INDEXELEMENTSIZE_32BIT};
 
     return mesh;

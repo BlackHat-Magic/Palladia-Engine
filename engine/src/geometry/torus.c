@@ -100,10 +100,10 @@ PAL_MeshComponent create_torus_mesh (
         for (Uint32 ra = 0; ra < num_r_loops; ra++) {
             Uint32 ra1 = (ra + 1) % radial_segments;
 
-            Uint32 a = (Uint32) (tu * num_radial + ra);
-            Uint32 b = (Uint32) (tu1 * num_radial + ra);
-            Uint32 c = (Uint32) (tu1 * num_radial + ra1);
-            Uint32 d = (Uint32) (tu * num_radial + ra1);
+            Uint32 a = tu * num_radial + ra;
+            Uint32 b = tu1 * num_radial + ra;
+            Uint32 c = tu1 * num_radial + ra1;
+            Uint32 d = tu * num_radial + ra1;
 
             // Clockwise winding for front-face (matches
             // SDL_GPU_FRONTFACE_CLOCKWISE)
@@ -138,9 +138,9 @@ PAL_MeshComponent create_torus_mesh (
 
     PAL_MeshComponent out_mesh =
         (PAL_MeshComponent) {.vertex_buffer = vbo,
-                             .num_vertices = (Uint32) num_vertices,
+                             .num_vertices = num_vertices,
                              .index_buffer = ibo,
-                             .num_indices = (Uint32) num_indices,
+                             .num_indices = num_indices,
                              .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
 
     return out_mesh;

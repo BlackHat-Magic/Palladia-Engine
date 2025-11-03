@@ -1,5 +1,9 @@
 #pragma once
 
 #include <ecs/ecs.h>
+#include <geometry/g_common.h>
 
-PAL_MeshComponent create_tetrahedron_mesh (float radius, SDL_GPUDevice* device);
+#define PAL_TetrahedronMeshCreateInfo PAL_PlatonicMeshCreateInfo
+
+PAL_MeshComponent*
+PAL_CreateTetrahedronMesh (static PAL_TetrahedronMeshCreateInfo* info);

@@ -221,9 +221,13 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
     );
     if (state->meshes[GEO_RING].vertex_buffer == NULL) return SDL_APP_FAILURE;
 
-    // platonic solids
-    state->meshes[GEO_TETRAHEDRON] = create_tetrahedron_mesh (0.5f, state->renderer->device);
-    if (state->meshes[GEO_TETRAHEDRON].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    // tetrahedron
+    PAL_TetrahedronMeshCreateInfo tetrahedron_info = {
+        .radius = 0.5f,
+        .device = state->renderer->device
+    };
+    state->meshes[GEO_TETRAHEDRON] = PAL_CreateTetrahedronMesh (&tetrahedron_info);
+    if (state->meshes[GEO_TETRAHEDRON] == NULL) return SDL_APP_FAILURE;
 
     // box mesh
     PAL_BoxMeshCreateInfo box_info = {
@@ -235,8 +239,13 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
     state->meshes[GEO_BOX] = PAL_CreateBoxMesh (&box_info);
     if (state->meshes[GEO_BOX] == NULL) return SDL_APP_FAILURE;
 
-    state->meshes[GEO_OCTAHEDRON] = create_octahedron_mesh (0.5f, state->renderer->device);
-    if (state->meshes[GEO_OCTAHEDRON].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    // octahedron
+    PAL_OctahedronMeshCreateInfo octahedron_info = {
+        .radius = 0.5f;
+        .device = state->renderer->device
+    };
+    state->meshes[GEO_OCTAHEDRON] = PAL_CreateOctahedronMesh (&octahedron_info);
+    if (state->meshes[GEO_OCTAHEDRON] == NULL) return SDL_APP_FAILURE;
 
     // dodecahedron
     PAL_DodecahedronMeshCreateInfo dodecahedron_info = {
@@ -246,8 +255,13 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
     state->meshes[GEO_DODECAHEDRON] = PAL_CreateDodecahedronMesh (&dodecahedron_info);
     if (state->meshes[GEO_DODECAHEDRON] == NULL) return SDL_APP_FAILURE;
 
-    state->meshes[GEO_ICOSAHEDRON] = create_icosahedron_mesh (0.5f, state->renderer->device);
-    if (state->meshes[GEO_ICOSAHEDRON].vertex_buffer == NULL) return SDL_APP_FAILURE;
+    // icosahedron
+    PAL_IcosahedronMeshCreateInfo icosahedron_info = {
+        .radius = 0.5f,
+        .device = state->renderer->device
+    };
+    state->meshes[GEO_ICOSAHEDRON] = PAL_CreateIcosahedronMesh (&icosahedron_info);
+    if (state->meshes[GEO_ICOSAHEDRON] == NULL) return SDL_APP_FAILURE;
 
     // capsule
     PAL_CapsuleMeshCreateInfo capsule_info = {

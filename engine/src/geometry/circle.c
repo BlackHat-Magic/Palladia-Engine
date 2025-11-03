@@ -54,10 +54,10 @@ PAL_CreateCircleMesh (static PAL_CircleMeshCreateInfo* info) {
     // Indices (clockwise winding)
     Uint32 index_idx = 0;
     for (Uint32 i = 0; i < info->segments; i++) {
-        indices[index_idx++] = 0;                // Center
-        indices[index_idx++] = (Uint32) (i + 1); // Current ring vertex
-        indices[index_idx++] = (Uint32) ((i + 1) % info->segments +
-                                         1); // Next ring vertex (wrap around)
+        indices[index_idx++] = 0;     // Center
+        indices[index_idx++] = i + 1; // Current ring vertex
+        indices[index_idx++] =
+            (i + 1) % info->segments + 1; // Next ring vertex (wrap around)
     }
 
     // Upload to GPU
@@ -86,9 +86,8 @@ PAL_CreateCircleMesh (static PAL_CircleMeshCreateInfo* info) {
         return NULL;
     }
     *mesh = (PAL_MeshComponent) {
-        .vertex_buffer = vbo, .num_vertices = (Uint32) num_vertices,
-        .index_buffer = ibo, .num_indices = (Uint32) num_indices,
-        .index_size = SDL_GPU_INDEXELEMENTSIZE_32BIT
+        .vertex_buffer = vbo, .num_vertices = num_vertices, .index_buffer = ibo,
+        .num_indices = num_indices, .index_size = SDL_GPU_INDEXELEMENTSIZE_32BIT
     }
 
     return mesh;

@@ -80,10 +80,10 @@ PAL_MeshComponent create_ring_mesh (
     Uint32 index_idx = 0;
     for (Uint32 i = 0; i < theta_segments; i++) {
         for (Uint32 j = 0; j < phi_segments; j++) {
-            Uint32 a = (Uint32) (i * num_phi + j);
-            Uint32 b = (Uint32) (i * num_phi + j + 1);
-            Uint32 c = (Uint32) ((i + 1) * num_phi + j + 1);
-            Uint32 d = (Uint32) ((i + 1) * num_phi + j);
+            Uint32 a = i * num_phi + j;
+            Uint32 b = i * num_phi + j + 1;
+            Uint32 c = (i + 1) * num_phi + j + 1;
+            Uint32 d = (i + 1) * num_phi + j;
 
             // Clockwise winding to match circle geometry
             indices[index_idx++] = a;
@@ -118,9 +118,9 @@ PAL_MeshComponent create_ring_mesh (
 
     PAL_MeshComponent out_mesh =
         (PAL_MeshComponent) {.vertex_buffer = vbo,
-                             .num_vertices = (Uint32) num_vertices,
+                             .num_vertices = num_vertices,
                              .index_buffer = ibo,
-                             .num_indices = (Uint32) num_indices,
+                             .num_indices = num_indices,
                              .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
 
     return out_mesh;

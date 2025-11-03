@@ -59,10 +59,10 @@ PAL_MeshComponent create_plane_mesh (
     Uint32 index_idx = 0;
     for (Uint32 iy = 0; iy < height_segments; iy++) {
         for (Uint32 ix = 0; ix < width_segments; ix++) {
-            Uint32 a = (Uint32) (iy * (width_segments + 1) + ix);
-            Uint32 b = (Uint32) (iy * (width_segments + 1) + ix + 1);
-            Uint32 c = (Uint32) ((iy + 1) * (width_segments + 1) + ix + 1);
-            Uint32 d = (Uint32) ((iy + 1) * (width_segments + 1) + ix);
+            Uint32 a = iy * (width_segments + 1) + ix;
+            Uint32 b = iy * (width_segments + 1) + ix + 1;
+            Uint32 c = (iy + 1) * (width_segments + 1) + ix + 1;
+            Uint32 d = (iy + 1) * (width_segments + 1) + ix;
 
             // Triangle 1: a -> b -> c (clockwise)
             indices[index_idx++] = a;
@@ -96,9 +96,9 @@ PAL_MeshComponent create_plane_mesh (
 
     PAL_MeshComponent out_mesh =
         (PAL_MeshComponent) {.vertex_buffer = vbo,
-                             .num_vertices = (Uint32) num_vertices,
+                             .num_vertices = num_vertices,
                              .index_buffer = ibo,
-                             .num_indices = (Uint32) num_indices,
+                             .num_indices = num_indices,
                              .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
 
     return out_mesh;

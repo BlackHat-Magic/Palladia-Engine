@@ -79,8 +79,8 @@ load_texture (SDL_GPUDevice* device, const char* bmp_file_path) {
     SDL_GPUTextureCreateInfo tex_create_info = {
         .type = SDL_GPU_TEXTURETYPE_2D,
         .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM, // RGBA,
-        .width = (Uint32) abgr_surface->w,
-        .height = (Uint32) abgr_surface->h,
+        .width = abgr_surface->w,
+        .height = abgr_surface->h,
         .layer_count_or_depth = 1,
         .num_levels = 1,
         .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER
@@ -93,7 +93,7 @@ load_texture (SDL_GPUDevice* device, const char* bmp_file_path) {
 
     // create transfer buffer
     SDL_GPUTransferBufferCreateInfo transfer_info = {
-        .size = (Uint32) (abgr_surface->pitch * abgr_surface->h),
+        .size = abgr_surface->pitch * abgr_surface->h,
         .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD
     };
     SDL_GPUTransferBuffer* transfer_buf =
@@ -126,13 +126,13 @@ load_texture (SDL_GPUDevice* device, const char* bmp_file_path) {
     SDL_GPUTextureTransferInfo src_info = {
         .transfer_buffer = transfer_buf,
         .offset = 0,
-        .pixels_per_row = (Uint32) abgr_surface->w,
-        .rows_per_layer = (Uint32) abgr_surface->h,
+        .pixels_per_row = abgr_surface->w,
+        .rows_per_layer = abgr_surface->h,
     };
     SDL_GPUTextureRegion dst_region = {
         .texture = texture,
-        .w = (Uint32) abgr_surface->w,
-        .h = (Uint32) abgr_surface->h,
+        .w = abgr_surface->w,
+        .h = abgr_surface->h,
         .d = 1,
     };
     SDL_UploadToGPUTexture (copy_pass, &src_info, &dst_region, false);

@@ -3,10 +3,8 @@
 #include <geometry/g_common.h>
 #include <geometry/tetrahedron.h>
 
-PAL_MeshComponent
-create_tetrahedron_mesh (float radius, SDL_GPUDevice* device) {
-    PAL_MeshComponent null_mesh = (PAL_MeshComponent) {0};
-    // 4 vertices (positions + normals + UVs; simple UV projection for demo)
+PAL_MeshComponent*
+PAL_CreateTetrahedronMesh (static PAL_TetrahedronMeshCreateInfo* info) {
     const Uint32 num_vertices = 4;
     float vertices[4 * 8] = {
         1.0f,  1.0f,  1.0f,  0.0f, 0.0f, 0.0f, 0.5f, 0.5f, // Vert 0
@@ -47,26 +45,30 @@ create_tetrahedron_mesh (float radius, SDL_GPUDevice* device) {
     // Compute normals
     PAL_ComputeNormals (vertices, num_vertices, indices, num_indices, 8, 0, 3);
 
-    SDL_GPUBuffer* vbo = NULL;
     Uint64 vertices_size = num_vertices * 8 * sizeof (float);
-    Uint32 vbo_failed =
+    SDL_GPUBuffer* vbo =
         PAL_UploadVertices (device, vertices, vertices_size, &vbo);
-    if (vbo_failed) return null_mesh;
+    if (vbo == NULL) return NULL;
 
-    SDL_GPUBuffer* ibo = NULL;
     Uint64 indices_size = num_indices * sizeof (Uint32);
-    Uint32 ibo_failed = PAL_UploadIndices (device, indices, indices_size, &ibo);
-    if (ibo_failed) {
+    SDL_GPUBuffer* ibo =
+        PAL_UploadIndices (device, indices, indices_size, &ibo);
+    if (ibo == NULL) {
         SDL_ReleaseGPUBuffer (device, vbo);
-        return null_mesh;
+        return NULL;
     }
 
-    PAL_MeshComponent out_mesh =
-        (PAL_MeshComponent) {.vertex_buffer = vbo,
-                             .num_vertices = (Uint32) num_vertices,
-                             .index_buffer = ibo,
-                             .num_indices = (Uint32) num_indices,
-                             .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
+    PAL_MeshComponent* mesh = malloc (sizeof (PAL_MeshComponent));
+    if (mesh == NULL) {
+        SDL_ReleaseGPUBuffer (device, vbo);
+        SDL_ReleaseGPUBuffer (device, ibo);
+        return NULL;
+    }
+    *mesh = (PAL_MeshComponent) {.vertex_buffer = vbo,
+                                 .num_vertices = num_vertices,
+                                 .index_buffer = ibo,
+                                 .num_indices = num_indices,
+                                 .index_size = SDL_GPU_INDEXELEMENTSIZE_16BIT};
 
-    return out_mesh;
+    return mesh;
 }

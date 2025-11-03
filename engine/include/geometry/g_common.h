@@ -27,3 +27,8 @@ void PAL_ComputeNormals (
     Uint32 pos_offset,
     Uint32 norm_offset
 );
+
+typedef struct {
+    float radius;
+    SDL_GPUDevice* device;
+} PAL_PlatonicMeshCreateInfo;

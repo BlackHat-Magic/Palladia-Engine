@@ -320,8 +320,8 @@ ui_create_text_texture (SDL_GPUDevice* device, SDL_Surface* abgr) {
     SDL_GPUTextureCreateInfo texinfo = {
         .type = SDL_GPU_TEXTURETYPE_2D,
         .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
-        .width = (Uint32) abgr->w,
-        .height = (Uint32) abgr->h,
+        .width = abgr->w,
+        .height = abgr->h,
         .layer_count_or_depth = 1,
         .num_levels = 1,
         .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER
@@ -332,7 +332,7 @@ ui_create_text_texture (SDL_GPUDevice* device, SDL_Surface* abgr) {
         return NULL;
     }
     SDL_GPUTransferBufferCreateInfo tbinfo = {
-        .size = (Uint32) (abgr->pitch * abgr->h),
+        .size = abgr->pitch * abgr->h,
         .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD
     };
     SDL_GPUTransferBuffer* tbuf = SDL_CreateGPUTransferBuffer (device, &tbinfo);
@@ -356,11 +356,11 @@ ui_create_text_texture (SDL_GPUDevice* device, SDL_Surface* abgr) {
     SDL_GPUTextureTransferInfo src = {
         .transfer_buffer = tbuf,
         .offset = 0,
-        .pixels_per_row = (Uint32) abgr->w,
-        .rows_per_layer = (Uint32) abgr->h
+        .pixels_per_row = abgr->w,
+        .rows_per_layer = abgr->h
     };
     SDL_GPUTextureRegion dst =
-        {.texture = tex, .w = (Uint32) abgr->w, .h = (Uint32) abgr->h, .d = 1};
+        {.texture = tex, .w = abgr->w, .h = abgr->h, .d = 1};
     SDL_UploadToGPUTexture (copy, &src, &dst, false);
     SDL_EndGPUCopyPass (copy);
     SDL_SubmitGPUCommandBuffer (cmd);
