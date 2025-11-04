@@ -159,10 +159,11 @@ void remove_transform (Entity e) {
 
 // Meshes
 void PAL_AddMeshComponent (Entity e, PAL_MeshComponent* mesh) {
-    pool_add (&mesh_pool, e, mesh, sizeof (PAL_MeshComponent*));
+    pool_add (&mesh_pool, e, &mesh, sizeof (PAL_MeshComponent*));
 }
 PAL_MeshComponent* PAL_GetMeshComponent (Entity e) {
-    return (PAL_MeshComponent*) pool_get (&mesh_pool, e, sizeof (PAL_MeshComponent));
+    PAL_MeshComponent** mesh = (PAL_MeshComponent**) pool_get (&mesh_pool, e, sizeof (PAL_MeshComponent*));
+    return *mesh;
 }
 bool has_mesh (Entity e) {
     return pool_has (&mesh_pool, e);
@@ -180,12 +181,13 @@ void remove_mesh (SDL_GPUDevice* device, Entity e) {
 
 // Materials
 void PAL_AddMaterialComponent (Entity e, PAL_MaterialComponent* material) {
-    pool_add (&material_pool, e, material, sizeof (PAL_MaterialComponent));
+    pool_add (&material_pool, e, &material, sizeof (PAL_MaterialComponent*));
 }
 PAL_MaterialComponent* PAL_GetMaterialComponent (Entity e) {
-    return (PAL_MaterialComponent*) pool_get (
-        &material_pool, e, sizeof (PAL_MaterialComponent)
+    PAL_MaterialComponent** mat = (PAL_MaterialComponent**) pool_get (
+        &material_pool, e, sizeof (PAL_MaterialComponent*)
     );
+    return *mat;
 }
 bool has_material (Entity e) {
     return pool_has (&material_pool, e);

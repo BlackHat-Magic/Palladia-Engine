@@ -7,10 +7,7 @@
 
 PAL_MaterialComponent* PAL_CreateBasicMaterial (const PAL_BasicMaterialCreateInfo* info) {
     PAL_MaterialComponent* mat = malloc (sizeof (PAL_MaterialComponent));
-    if (mat == NULL) {
-        free (mat);
-        return NULL;
-    }
+    if (mat == NULL) return NULL;
 
     PAL_ShaderCreateInfo vertex_info = {
         .device = info->renderer->device,
@@ -104,6 +101,7 @@ PAL_MaterialComponent* PAL_CreateBasicMaterial (const PAL_BasicMaterialCreateInf
         .texture = NULL,
         .vertex_shader = vertex_shader,
         .fragment_shader = fragment_shader,
+        .pipeline = pipeline
     };
 
     return mat;

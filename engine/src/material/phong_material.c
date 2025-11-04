@@ -126,6 +126,7 @@ PAL_MaterialComponent* PAL_CreatePhongMaterial (const PAL_PhongMaterialCreateInf
         .sampler = info->sampler,
         .vertex_shader = NULL,
         .fragment_shader = NULL,
+        .pipeline = pipeline
     };
 
     return mat;
