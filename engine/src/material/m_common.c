@@ -6,17 +6,9 @@
 #include <material/m_common.h>
 
 // shader loader helper function
-SDL_GPUShader* load_shader (
-    SDL_GPUDevice* device,
-    const char* filename,
-    SDL_GPUShaderStage stage,
-    Uint32 sampler_count,
-    Uint32 uniform_buffer_count,
-    Uint32 storage_buffer_count,
-    Uint32 storage_texture_count
-) {
-    if (!SDL_GetPathInfo (filename, NULL)) {
-        SDL_Log ("Couldn't read file %s: %s", filename, SDL_GetError ());
+SDL_GPUShader* PAL_LoadShader (const PAL_ShaderCreateInfo* info) {
+    if (!SDL_GetPathInfo (info->filename, NULL)) {
+        SDL_Log ("Couldn't read file %s: %s", info->filename, SDL_GetError ());
         return NULL;
     }
 
@@ -24,9 +16,9 @@ SDL_GPUShader* load_shader (
     SDL_GPUShaderFormat format = SDL_GPU_SHADERFORMAT_SPIRV;
 
     Uint64 code_size;
-    void* code = SDL_LoadFile (filename, &code_size);
+    void* code = SDL_LoadFile (info->filename, &code_size);
     if (code == NULL) {
-        SDL_Log ("Could't read file %s: %s", filename, SDL_GetError ());
+        SDL_Log ("Could't read file %s: %s", info->filename, SDL_GetError ());
         return NULL;
     }
 
@@ -35,14 +27,14 @@ SDL_GPUShader* load_shader (
         .code_size = code_size,
         .entrypoint = entrypoint,
         .format = format,
-        .stage = stage,
-        .num_samplers = sampler_count,
-        .num_uniform_buffers = uniform_buffer_count,
-        .num_storage_buffers = storage_buffer_count,
-        .num_storage_textures = storage_texture_count,
+        .stage = info->stage,
+        .num_samplers = info->sampler_count,
+        .num_uniform_buffers = info->uniform_buffer_count,
+        .num_storage_buffers = info->storage_buffer_count,
+        .num_storage_textures = info->storage_texture_count,
     };
 
-    SDL_GPUShader* shader = SDL_CreateGPUShader (device, &shader_info);
+    SDL_GPUShader* shader = SDL_CreateGPUShader (info->device, &shader_info);
     SDL_free (code);
     if (shader == NULL) {
         SDL_Log ("Couldn't create GPU Shader: %s", SDL_GetError ());
@@ -53,7 +45,7 @@ SDL_GPUShader* load_shader (
 
 // texture loader helper function
 SDL_GPUTexture*
-load_texture (SDL_GPUDevice* device, const char* bmp_file_path) {
+PAL_LoadTexture (SDL_GPUDevice* device, const char* bmp_file_path) {
     // note to self: don't forget to look at texture wrapping, texture
     // filtering, mipmaps https://learnopengl.com/Getting-started/Textures load
     // texture

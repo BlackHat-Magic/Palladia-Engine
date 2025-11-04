@@ -84,7 +84,7 @@ void ui_handle_event (SDL_Event* event, UIComponent* ui) {
 }
 
 UIComponent* create_ui_component (
-    const gpu_renderer* renderer,
+    const PAL_GPURenderer* renderer,
     const int max_rects,
     const int max_texts,
     const char* font_path,
@@ -183,10 +183,16 @@ UIComponent* create_ui_component (
     }
     ui->ibo_size = isize;
 
-    ui->vertex = load_shader (
-        renderer->device, "shaders/ui.vert.spv", SDL_GPU_SHADERSTAGE_VERTEX, 0,
-        0, 0, 0
-    );
+    PAL_ShaderCreateInfo vertex_info = {
+        .device = renderer->device,
+        .filename = "shaders/ui.vert.spv",
+        .stage = SDL_GPU_SHADERSTAGE_VERTEX,
+        .sampler_count = 0,
+        .uniform_buffer_count = 0,
+        .storage_buffer_count = 0,
+        .storage_texture_count = 0
+    };
+    ui->vertex = PAL_LoadShader (&vertex_info);
     if (ui->vertex == NULL) {
         free (ui->rects);
         TTF_CloseFont (ui->font);
@@ -196,10 +202,16 @@ UIComponent* create_ui_component (
         free (ui);
         return NULL;
     }
-    ui->fragment = load_shader (
-        renderer->device, "shaders/ui.frag.spv", SDL_GPU_SHADERSTAGE_FRAGMENT,
-        1, 0, 0, 0
-    );
+    PAL_ShaderCreateInfo fragment_info = {
+        .device = renderer->device,
+        .filename = "shaders/ui.frag.spv",
+        .stage = SDL_GPU_SHADERSTAGE_FRAGMENT,
+        .sampler_count = 1,
+        .uniform_buffer_count = 0,
+        .storage_buffer_count = 0,
+        .storage_texture_count = 0
+    };
+    ui->fragment = PAL_LoadShader (&fragment_info);
     if (ui->fragment == NULL) {
         free (ui->rects);
         TTF_CloseFont (ui->font);

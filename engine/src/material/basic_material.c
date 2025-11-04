@@ -1,36 +1,43 @@
+#include <stdlib.h>
+
 #include <SDL3/SDL_gpu.h>
+
 #include <material/basic_material.h>
 #include <material/m_common.h>
 
-MaterialComponent create_basic_material (
-    SDL_FColor color,
-    SDL_GPUCullMode cullmode,
-    gpu_renderer* renderer
-) {
-    MaterialComponent mat = {
-        .color = color,
-        .texture = NULL,
-        .vertex_shader = NULL,
-        .fragment_shader = NULL,
-    };
+PAL_MaterialComponent* PAL_CreateBasicMaterial (const PAL_BasicMaterialCreateInfo* info) {
+    PAL_MaterialComponent* mat = malloc (sizeof (PAL_MaterialComponent));
+    if (mat == NULL) return NULL;
 
-    // TODO: communicate failure to caller
-    mat.vertex_shader = load_shader (
-        renderer->device, "shaders/basic_material.vert.spv",
-        SDL_GPU_SHADERSTAGE_VERTEX, 0, 2, 0, 0
-    );
-    if (mat.vertex_shader == NULL) {
-        return mat;
+    PAL_ShaderCreateInfo vertex_info = {
+        .device = info->renderer->device,
+        .filename = "shaders/basic_material.vert.spv",
+        .stage = SDL_GPU_SHADERSTAGE_VERTEX,
+        .sampler_count = 0,
+        .uniform_buffer_count = 2,
+        .storage_buffer_count = 0,
+        .storage_texture_count = 0
     };
+    SDL_GPUShader* vertex_shader = PAL_LoadShader (&vertex_info);
+    if (vertex_shader == NULL) {
+        free (mat);
+        return NULL;
+    }
 
-    mat.fragment_shader = load_shader (
-        renderer->device, "shaders/basic_material.frag.spv",
-        SDL_GPU_SHADERSTAGE_FRAGMENT, 1, 1, 2, 0
-    );
-    if (mat.fragment_shader == NULL) {
-        SDL_ReleaseGPUShader (renderer->device, mat.vertex_shader);
-        mat.vertex_shader = NULL;
-        return mat;
+    PAL_ShaderCreateInfo fragment_info = {
+        .device = info->renderer->device,
+        .filename = "shaders/basic_material.frag.spv",
+        .stage = SDL_GPU_SHADERSTAGE_FRAGMENT,
+        .sampler_count = 1,
+        .uniform_buffer_count = 1,
+        .storage_buffer_count = 2,
+        .storage_texture_count = 0
+    };
+    SDL_GPUShader* fragment_shader = PAL_LoadShader (&fragment_info);
+    if (fragment_shader == NULL) {
+        free (mat);
+        SDL_ReleaseGPUShader (info->renderer->device, vertex_shader);
+        return NULL;
     }
 
     SDL_GPUGraphicsPipelineCreateInfo pipe_info = {
@@ -38,13 +45,13 @@ MaterialComponent create_basic_material (
             {.num_color_targets = 1,
              .color_target_descriptions =
                  (SDL_GPUColorTargetDescription[]) {
-                     {.format = renderer->format}
+                     {.format = info->renderer->format}
                  },
              .has_depth_stencil_target = true,
              .depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D24_UNORM},
         .primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
-        .vertex_shader = mat.vertex_shader,
-        .fragment_shader = mat.fragment_shader,
+        .vertex_shader = vertex_shader,
+        .fragment_shader = fragment_shader,
         .vertex_input_state =
             {.vertex_buffer_descriptions =
                  (SDL_GPUVertexBufferDescription[]) {
@@ -72,7 +79,7 @@ MaterialComponent create_basic_material (
                  }},
         .rasterizer_state =
             {.fill_mode = SDL_GPU_FILLMODE_FILL,
-             .cull_mode = cullmode,
+             .cull_mode = info->cullmode,
              .front_face = SDL_GPU_FRONTFACE_CLOCKWISE},
         .depth_stencil_state = {
             .enable_depth_test = true,
@@ -81,14 +88,21 @@ MaterialComponent create_basic_material (
             .enable_stencil_test = false
         }
     };
-    mat.pipeline = SDL_CreateGPUGraphicsPipeline (renderer->device, &pipe_info);
-    if (mat.pipeline == NULL) {
-        SDL_ReleaseGPUShader (renderer->device, mat.vertex_shader);
-        SDL_ReleaseGPUShader (renderer->device, mat.fragment_shader);
-        mat.vertex_shader = NULL;
-        mat.fragment_shader = NULL;
-        return mat;
+    SDL_GPUGraphicsPipeline* pipeline = SDL_CreateGPUGraphicsPipeline (info->renderer->device, &pipe_info);
+    if (pipeline == NULL) {
+        free (mat);
+        SDL_ReleaseGPUShader (info->renderer->device, vertex_shader);
+        SDL_ReleaseGPUShader (info->renderer->device, fragment_shader);
+        return NULL;
     }
+
+    *mat = (PAL_MaterialComponent) {
+        .color = info->color,
+        .texture = NULL,
+        .vertex_shader = vertex_shader,
+        .fragment_shader = fragment_shader,
+        .pipeline = pipeline
+    };
 
     return mat;
 }

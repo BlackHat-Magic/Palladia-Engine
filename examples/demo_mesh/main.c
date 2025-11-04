@@ -53,7 +53,7 @@ typedef enum {
 
 typedef struct {
     bool quit;
-    gpu_renderer* renderer;
+    PAL_GPURenderer* renderer;
     Entity player;
     Entity entity;
     PAL_MeshComponent* meshes[13];
@@ -178,8 +178,7 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
 
     // load texture
     state->white_texture = create_white_texture (state->renderer->device);
-    if (!state->white_texture)
-        return SDL_APP_FAILURE; // logging handled inside load_texture()
+    if (state->white_texture == NULL) return SDL_APP_FAILURE;
 
     // player
     state->player = create_entity ();
@@ -361,8 +360,16 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
         .enable_anisotropy = false
     };
     SDL_GPUSampler* torus_sampler = SDL_CreateGPUSampler (state->renderer->device, &torus_sampler_info);
-    MaterialComponent torus_material = create_phong_material (state->renderer, (SDL_FColor) {1.0f, 1.0f, 1.0f, 1.0f}, (SDL_FColor) {1.0f, 1.0f, 1.0f, 1.0f}, SDL_GPU_CULLMODE_BACK, state->white_texture, torus_sampler);
-    add_material (state->entity, torus_material);
+    PAL_PhongMaterialCreateInfo phong_info = {
+        .renderer = state->renderer,
+        .color = (SDL_FColor) {1.0f, 1.0f, 1.0f, 1.0f},
+        .emissive = (SDL_FColor) {0.0f, 0.0f, 0.0f, 0.0f},
+        .cullmode = SDL_GPU_CULLMODE_BACK,
+        .texture = state->white_texture,
+        .sampler = torus_sampler
+    };
+    PAL_MaterialComponent* torus_material = PAL_CreatePhongMaterial (&phong_info);
+    PAL_AddMaterialComponent (state->entity, torus_material);
 
     // torus transform
     add_transform (

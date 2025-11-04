@@ -1,42 +1,43 @@
+#include <stdlib.h>
+
 #include <SDL3/SDL_gpu.h>
+
 #include <material/m_common.h>
 #include <material/phong_material.h>
 
-MaterialComponent create_phong_material (
-    gpu_renderer* renderer,
-    SDL_FColor color,
-    SDL_FColor emissive,
-    SDL_GPUCullMode cullmode,
-    SDL_GPUTexture* texture,
-    SDL_GPUSampler* sampler
-) {
-    // TODO: return pointer
-    MaterialComponent mat = {
-        .color = color,
-        .emissive = emissive,
-        .texture = texture,
-        .sampler = sampler,
-        .vertex_shader = NULL,
-        .fragment_shader = NULL,
-    };
+PAL_MaterialComponent* PAL_CreatePhongMaterial (const PAL_PhongMaterialCreateInfo* info) {
+    PAL_MaterialComponent* mat = malloc (sizeof (PAL_MaterialComponent));
+    if (mat == NULL) return NULL;
 
-    // TODO: communicate failure to caller
-    mat.vertex_shader = load_shader (
-        renderer->device, "shaders/phong_material.vert.spv",
-        SDL_GPU_SHADERSTAGE_VERTEX, 0, 2, 0, 0
-    );
-    if (mat.vertex_shader == NULL) {
-        return mat;
+    PAL_ShaderCreateInfo vertex_info = {
+        .device = info->renderer->device,
+        .filename = "shaders/phong_material.vert.spv",
+        .stage = SDL_GPU_SHADERSTAGE_VERTEX,
+        .sampler_count = 0,
+        .uniform_buffer_count = 2,
+        .storage_buffer_count = 0,
+        .storage_texture_count = 0
+    };
+    SDL_GPUShader* vertex_shader = PAL_LoadShader (&vertex_info);
+    if (vertex_shader == NULL) {
+        free (mat);
+        return NULL;
     }
 
-    mat.fragment_shader = load_shader (
-        renderer->device, "shaders/phong_material.frag.spv",
-        SDL_GPU_SHADERSTAGE_FRAGMENT, 1, 1, 2, 0
-    );
-    if (mat.fragment_shader == NULL) {
-        SDL_ReleaseGPUShader (renderer->device, mat.vertex_shader);
-        mat.vertex_shader = NULL;
-        return mat;
+    PAL_ShaderCreateInfo fragment_info = {
+        .device = info->renderer->device,
+        .filename = "shaders/phong_material.frag.spv",
+        .stage = SDL_GPU_SHADERSTAGE_FRAGMENT,
+        .sampler_count = 1,
+        .uniform_buffer_count = 1,
+        .storage_buffer_count = 2,
+        .storage_texture_count = 0
+    };
+    SDL_GPUShader* fragment_shader = PAL_LoadShader (&fragment_info);
+    if (fragment_shader == NULL) {
+        free (mat);
+        SDL_ReleaseGPUShader (info->renderer->device, vertex_shader);
+        return NULL;
     }
 
     SDL_GPUGraphicsPipelineCreateInfo pipe_info = {
@@ -44,13 +45,13 @@ MaterialComponent create_phong_material (
             {.num_color_targets = 1,
              .color_target_descriptions =
                  (SDL_GPUColorTargetDescription[]) {
-                     {.format = renderer->format}
+                     {.format = info->renderer->format}
                  },
              .has_depth_stencil_target = true,
              .depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D24_UNORM},
         .primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
-        .vertex_shader = mat.vertex_shader,
-        .fragment_shader = mat.fragment_shader,
+        .vertex_shader = vertex_shader,
+        .fragment_shader = fragment_shader,
         .vertex_input_state =
             {.vertex_buffer_descriptions =
                  (SDL_GPUVertexBufferDescription[]) {
@@ -78,7 +79,7 @@ MaterialComponent create_phong_material (
                  }},
         .rasterizer_state =
             {.fill_mode = SDL_GPU_FILLMODE_FILL,
-             .cull_mode = cullmode,
+             .cull_mode = info->cullmode,
              .front_face = SDL_GPU_FRONTFACE_CLOCKWISE},
         .depth_stencil_state = {
             .enable_depth_test = true,
@@ -87,39 +88,46 @@ MaterialComponent create_phong_material (
             .enable_stencil_test = false
         }
     };
-    mat.pipeline = SDL_CreateGPUGraphicsPipeline (renderer->device, &pipe_info);
-    if (mat.pipeline == NULL) {
-        SDL_ReleaseGPUShader (renderer->device, mat.vertex_shader);
-        SDL_ReleaseGPUShader (renderer->device, mat.fragment_shader);
-        SDL_Log (
-            "Failed to create phong material pipeline: %s", SDL_GetError ()
-        );
-        return mat;
+    SDL_GPUGraphicsPipeline* pipeline = SDL_CreateGPUGraphicsPipeline (info->renderer->device, &pipe_info);
+    if (pipeline == NULL) {
+        free (mat);
+        SDL_ReleaseGPUShader (info->renderer->device, vertex_shader);
+        SDL_ReleaseGPUShader (info->renderer->device, fragment_shader);
+        return NULL;
     }
 
-    SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer (renderer->device);
+    SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer (info->renderer->device);
     if (cmd == NULL) {
-        SDL_ReleaseGPUShader (renderer->device, mat.vertex_shader);
-        SDL_ReleaseGPUShader (renderer->device, mat.fragment_shader);
-        SDL_ReleaseGPUGraphicsPipeline (renderer->device, mat.pipeline);
-        mat.vertex_shader = NULL;
-        mat.fragment_shader = NULL;
-        return mat;
+        free (mat);
+        SDL_ReleaseGPUShader (info->renderer->device, vertex_shader);
+        SDL_ReleaseGPUShader (info->renderer->device, fragment_shader);
+        SDL_ReleaseGPUGraphicsPipeline (info->renderer->device, pipeline);
+        return NULL;
     }
 
     // material UBO (descriptor set 1)
     Uint32 ubo_size = 0;
-    ubo_size += sizeof (color);
-    ubo_size += sizeof (emissive);
+    ubo_size += sizeof (info->color);
+    ubo_size += sizeof (info->emissive);
     // PBR params (metallic, roughness, specular, sheen, clearcoat, IOR, etc.)
     // opacity/alpha cutoff for alpha test
     // UV transform/scale/offset (prob not)
     // flags/modes
     // indices/scales for texture channels
     Uint8 fragment_ubo[ubo_size > 0 ? ubo_size : 1];
-    memcpy (fragment_ubo, &color, sizeof (color));
-    memcpy (fragment_ubo + sizeof (color), &emissive, sizeof (emissive));
+    memcpy (fragment_ubo, &info->color, sizeof (info->color));
+    memcpy (fragment_ubo + sizeof (info->color), &info->emissive, sizeof (info->emissive));
     SDL_PushGPUFragmentUniformData (cmd, 0, fragment_ubo, ubo_size);
+
+    *mat = (PAL_MaterialComponent) {
+        .color = info->color,
+        .emissive = info->emissive,
+        .texture = info->texture,
+        .sampler = info->sampler,
+        .vertex_shader = NULL,
+        .fragment_shader = NULL,
+        .pipeline = pipeline
+    };
 
     return mat;
 }

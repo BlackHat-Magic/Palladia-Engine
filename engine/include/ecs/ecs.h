@@ -37,7 +37,7 @@ typedef struct {
     SDL_GPUShader* vertex_shader;
     SDL_GPUShader* fragment_shader;
     SDL_GPUGraphicsPipeline* pipeline;
-} MaterialComponent;
+} PAL_MaterialComponent;
 
 typedef struct {
     float fov;
@@ -109,8 +109,8 @@ bool has_mesh (Entity e);
 void remove_mesh (SDL_GPUDevice* device, Entity e); // state for device release
 
 // Materials
-void add_material (Entity e, MaterialComponent material);
-MaterialComponent* get_material (Entity e);
+void PAL_AddMaterialComponent (Entity e, PAL_MaterialComponent* material);
+PAL_MaterialComponent* PAL_GetMaterialComponent (Entity e);
 bool has_material (Entity e);
 void remove_material (
     SDL_GPUDevice* device,
@@ -156,8 +156,8 @@ typedef struct {
     Uint32 ambient_size;
     SDL_GPUBuffer* point_ssbo;
     Uint32 point_size;
-} gpu_renderer;
-gpu_renderer* renderer_init (
+} PAL_GPURenderer;
+PAL_GPURenderer* renderer_init (
     SDL_GPUDevice* device,
     SDL_Window* window,
     const Uint32 width,
@@ -166,14 +166,14 @@ gpu_renderer* renderer_init (
 
 // Ambient Lights
 // rgba -> rgb + intensity
-void add_ambient_light (Entity e, SDL_FColor color, gpu_renderer* renderer);
+void add_ambient_light (Entity e, SDL_FColor color, PAL_GPURenderer* renderer);
 AmbientLightComponent* get_ambient_light (Entity e);
 bool has_ambient_light (Entity e);
 void remove_ambient_light (Entity e);
 
 // Point Lights
 // rgba -> rgb + intensity
-void add_point_light (Entity e, SDL_FColor color, gpu_renderer* renderer);
+void add_point_light (Entity e, SDL_FColor color, PAL_GPURenderer* renderer);
 PointLightComponent* get_point_light (Entity e);
 bool has_point_light (Entity e);
 void remove_point_light (Entity e);
@@ -182,7 +182,7 @@ void remove_point_light (Entity e);
 void fps_controller_event_system (SDL_Event* event);
 void fps_controller_update_system (float dt);
 SDL_AppResult render_system (
-    gpu_renderer* renderer,
+    PAL_GPURenderer* renderer,
     Entity cam,
     Uint64* prerender,
     Uint64* preui,
