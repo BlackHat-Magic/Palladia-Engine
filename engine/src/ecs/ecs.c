@@ -159,14 +159,10 @@ void remove_transform (Entity e) {
 
 // Meshes
 void PAL_AddMeshComponent (Entity e, PAL_MeshComponent* mesh) {
-    pool_add (&mesh_pool, e, &mesh, sizeof (PAL_MeshComponent*));
+    pool_add (&mesh_pool, e, mesh, sizeof (PAL_MeshComponent*));
 }
 PAL_MeshComponent* PAL_GetMeshComponent (Entity e) {
-    // the most safe and wonderful getter 🥰
-    PAL_MeshComponent** mesh = (PAL_MeshComponent**) pool_get (
-        &mesh_pool, e, sizeof (PAL_MeshComponent)
-    );
-    return *mesh;
+    return (PAL_MeshComponent*) pool_get (&mesh_pool, e, sizeof (PAL_MeshComponent));
 }
 bool has_mesh (Entity e) {
     return pool_has (&mesh_pool, e);
@@ -183,19 +179,19 @@ void remove_mesh (SDL_GPUDevice* device, Entity e) {
 }
 
 // Materials
-void add_material (Entity e, MaterialComponent material) {
-    pool_add (&material_pool, e, &material, sizeof (MaterialComponent));
+void PAL_AddMaterialComponent (Entity e, PAL_MaterialComponent* material) {
+    pool_add (&material_pool, e, material, sizeof (PAL_MaterialComponent));
 }
-MaterialComponent* get_material (Entity e) {
-    return (MaterialComponent*) pool_get (
-        &material_pool, e, sizeof (MaterialComponent)
+PAL_MaterialComponent* PAL_GetMaterialComponent (Entity e) {
+    return (PAL_MaterialComponent*) pool_get (
+        &material_pool, e, sizeof (PAL_MaterialComponent)
     );
 }
 bool has_material (Entity e) {
     return pool_has (&material_pool, e);
 }
 void remove_material (SDL_GPUDevice* device, Entity e) {
-    MaterialComponent* mat = get_material (e);
+    PAL_MaterialComponent* mat = PAL_GetMaterialComponent (e);
     if (mat) {
         if (mat->texture) SDL_ReleaseGPUTexture (device, mat->texture);
         if (mat->pipeline)
@@ -205,7 +201,7 @@ void remove_material (SDL_GPUDevice* device, Entity e) {
         if (mat->fragment_shader)
             SDL_ReleaseGPUShader (device, mat->fragment_shader);
     }
-    pool_remove (&material_pool, e, sizeof (MaterialComponent));
+    pool_remove (&material_pool, e, sizeof (PAL_MaterialComponent));
 }
 
 // Cameras
@@ -275,7 +271,7 @@ void remove_ui (Entity e) {
 };
 
 // Ambient Lights
-void add_ambient_light (Entity e, SDL_FColor color, gpu_renderer* renderer) {
+void add_ambient_light (Entity e, SDL_FColor color, PAL_GPURenderer* renderer) {
     AmbientLightComponent comp = color;
     pool_add (&ambient_light_pool, e, &comp, sizeof (AmbientLightComponent));
 
@@ -358,7 +354,7 @@ void remove_ambient_light (Entity e) {
 // TODO: bulk initialize point lights
 // TODO: communicate failure to caller
 // TODO: what if the transform is added after the point light?
-void add_point_light (Entity e, SDL_FColor color, gpu_renderer* renderer) {
+void add_point_light (Entity e, SDL_FColor color, PAL_GPURenderer* renderer) {
     PointLightComponent comp = color;
     pool_add (&point_light_pool, e, &comp, sizeof (PointLightComponent));
 
@@ -461,14 +457,14 @@ void remove_point_light (Entity e) {
 }
 
 // TODO: more robust???
-gpu_renderer* renderer_init (
+PAL_GPURenderer* renderer_init (
     SDL_GPUDevice* device,
     SDL_Window* window,
     const Uint32 width,
     const Uint32 height
 ) {
     // create renderer
-    gpu_renderer* renderer = calloc (1, sizeof (gpu_renderer));
+    PAL_GPURenderer* renderer = calloc (1, sizeof (PAL_GPURenderer));
     if (renderer == NULL) {
         SDL_Log ("Failed to allocate GPU renderer.");
         return NULL;
@@ -607,7 +603,7 @@ void fps_controller_update_system (float dt) {
 }
 
 SDL_AppResult render_system (
-    gpu_renderer* renderer,
+    PAL_GPURenderer* renderer,
     Entity cam,
     Uint64* prerender,
     Uint64* preui,
@@ -731,7 +727,7 @@ SDL_AppResult render_system (
         Entity e = mesh_pool.index_to_entity[i];
         PAL_MeshComponent* mesh = PAL_GetMeshComponent (e);
         if (mesh == NULL) continue;
-        MaterialComponent* mat = get_material (e);
+        PAL_MaterialComponent* mat = PAL_GetMaterialComponent (e);
         TransformComponent* trans = get_transform (e);
         if (!mat || !mat->pipeline || !trans) continue;
 

@@ -114,7 +114,7 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
     // load texture
     state->white_texture = create_white_texture (state->device);
     if (!state->white_texture)
-        return SDL_APP_FAILURE; // logging handled inside load_texture()
+        return SDL_APP_FAILURE; // logging handled inside PAL_LoadTexture()
 
     // create sampler
     SDL_GPUSamplerCreateInfo sampler_info = {
@@ -155,11 +155,11 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
                 vec3 color = {
                     random_float (), random_float (), random_float ()
                 };
-                MaterialComponent icosahedron_material =
-                    create_phong_material (color, SIDE_FRONT, state);
+                PAL_MaterialComponent icosahedron_material =
+                    PAL_CreatePhongMaterial (color, SIDE_FRONT, state);
                 if (icosahedron_material.vertex_shader == NULL)
                     return SDL_APP_FAILURE;
-                add_material (ico, icosahedron_material);
+                PAL_AddMaterialComponent (ico, icosahedron_material);
                 vec3 position = {
                     2.0f * (float) i, 2.0f * (float) j, 2.0f * (float) k
                 };
