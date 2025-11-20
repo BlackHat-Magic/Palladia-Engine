@@ -1,6 +1,8 @@
 <div align="center">
 
-# Asmadi Engine
+# Palladia Engine
+
+(Formerly Asmadi)
 
 A Simple, ECS-based game engine written in C using SDL3's GPU API
 
