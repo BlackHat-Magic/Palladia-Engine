@@ -10,7 +10,7 @@ A Simple, ECS-based game engine written in C using SDL3's GPU API
 
 ## Overview
 
-The Asmadi Game Engine is a game engine using SDL3's GPU API to create 3D accelerated graphical applications with Vulkan (and soon hopefully WebGPU). I might add Metal support if I feel like it.
+The Asmadi Palladia Engine is a game engine using SDL3's GPU API to create 3D accelerated graphical applications with Vulkan (and soon hopefully WebGPU). I might add Metal support if I feel like it.
 
 ### Goals
 
