@@ -1,8 +1,8 @@
 #define SDL_MAIN_USE_CALLBACKS 1
 
 #include <math.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <SDL3/SDL_main.h>
 
@@ -12,11 +12,11 @@
 #include <geometry/plane.h>
 #include <geometry/ring.h>
 
-#include <geometry/tetrahedron.h>
 #include <geometry/box.h>
-#include <geometry/octahedron.h>
 #include <geometry/dodecahedron.h>
 #include <geometry/icosahedron.h>
+#include <geometry/octahedron.h>
+#include <geometry/tetrahedron.h>
 
 #include <geometry/capsule.h>
 #include <geometry/cone.h>
@@ -70,11 +70,13 @@ typedef struct {
     SDL_GPUTexture* white_texture;
 } AppState;
 
-static Uint32 uint8_slider (mu_Context* ctx, Uint8* value, Uint32 low, Uint32 high) {
+static Uint32
+uint8_slider (mu_Context* ctx, Uint8* value, Uint32 low, Uint32 high) {
     static float tmp;
     mu_push_id (ctx, &value, sizeof (value));
     tmp = *value;
-    Uint32 res = mu_slider_ex (ctx, &tmp, low, high, 0, "%.0f", MU_OPT_ALIGNCENTER);
+    Uint32 res =
+        mu_slider_ex (ctx, &tmp, low, high, 0, "%.0f", MU_OPT_ALIGNCENTER);
     *value = tmp;
     mu_pop_id (ctx);
     return res;
@@ -94,20 +96,24 @@ SDL_AppResult SDL_AppEvent (void* appstate, SDL_Event* event) {
     case SDL_EVENT_KEY_DOWN:
         if (event->key.key == SDLK_ESCAPE) {
             state->settings = !state->settings;
-            SDL_SetWindowRelativeMouseMode (state->renderer->window, !state->settings);
+            SDL_SetWindowRelativeMouseMode (
+                state->renderer->window, !state->settings
+            );
             return SDL_APP_CONTINUE;
             // break;
         }
         if (event->key.key == SDLK_F3) state->debug = !state->debug;
         if (event->key.key == SDLK_UP) {
             if (state->current_mesh < GEO_TORUS) {
-                PAL_MeshComponent* current_mesh = PAL_GetMeshComponent (state->entity);
+                PAL_MeshComponent* current_mesh =
+                    PAL_GetMeshComponent (state->entity);
                 *current_mesh = *state->meshes[++state->current_mesh];
             }
         }
         if (event->key.key == SDLK_DOWN) {
             if (state->current_mesh > GEO_CIRCLE) {
-                PAL_MeshComponent* current_mesh = PAL_GetMeshComponent (state->entity);
+                PAL_MeshComponent* current_mesh =
+                    PAL_GetMeshComponent (state->entity);
                 *current_mesh = *state->meshes[--state->current_mesh];
             }
         }
@@ -145,8 +151,8 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
 
     // Create window
     SDL_Window* window = SDL_CreateWindow (
-        "Guess what I brought... RECTANGLES!!!",STARTING_WIDTH, STARTING_HEIGHT,
-        SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN
+        "Guess what I brought... RECTANGLES!!!", STARTING_WIDTH,
+        STARTING_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN
     );
     if (window == NULL) {
         SDL_Log ("Couldn't create window/renderer: %s", SDL_GetError ());
@@ -171,7 +177,13 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
         return SDL_APP_FAILURE;
     }
 
-    state->renderer = renderer_init (device, window, STARTING_WIDTH, STARTING_HEIGHT);
+    PAL_RendererCreateInfo renderer_info = {
+        .device = device,
+        .window = window,
+        .width = STARTING_WIDTH,
+        .height = STARTING_HEIGHT
+    };
+    state->renderer = renderer_init (&renderer_info);
     if (state->renderer == NULL) {
         return SDL_APP_FAILURE;
     }
@@ -182,12 +194,20 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
 
     // player
     state->player = create_entity ();
-    add_transform (
-        state->player, (vec3) {0.0f, 0.0f, -2.0f}, (vec3) {0.0f, 0.0f, 0.0f},
-        (vec3) {1.0f, 1.0f, 1.0f}
-    );
-    add_camera (state->player, STARTING_FOV, 0.01f, 1000.0f);
-    add_fps_controller (state->player, MOUSE_SENSE, MOVEMENT_SPEED);
+    PAL_TransformCreateInfo player_transform_info = {
+        .position = (vec3) {0.0f, 0.0f, -2.0f},
+        .rotation = (vec3) {0.0f, 0.0f, 0.0f},
+        .scale = (vec3) {1.0f, 1.0f, 1.0f}
+    };
+    add_transform (state->player, &player_transform_info);
+    PAL_CameraCreateInfo camera_info =
+        {.fov = STARTING_FOV, .near_clip = 0.01f, .far_clip = 1000.0f};
+    add_camera (state->player, &camera_info);
+    PAL_FpsControllerCreateInfo fps_info = {
+        .mouse_sense = MOUSE_SENSE,
+        .move_speed = MOVEMENT_SPEED
+    };
+    add_fps_controller (state->player, &fps_info);
     state->settings = false;
     SDL_SetWindowRelativeMouseMode (state->renderer->window, !state->settings);
     UIComponent* ui = create_ui_component (
@@ -205,11 +225,8 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     state->entity = create_entity ();
 
     // circle mesh
-    PAL_CircleMeshCreateInfo circle_info = {
-        .radius = 0.5f,
-        .segments = 16,
-        .device = state->renderer->device
-    };
+    PAL_CircleMeshCreateInfo circle_info =
+        {.radius = 0.5f, .segments = 16, .device = state->renderer->device};
     state->meshes[GEO_CIRCLE] = PAL_CreateCircleMesh (&circle_info);
     if (state->meshes[GEO_CIRCLE] == NULL) return SDL_APP_FAILURE;
 
@@ -242,16 +259,13 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
         .radius = 0.5f,
         .device = state->renderer->device
     };
-    state->meshes[GEO_TETRAHEDRON] = PAL_CreateTetrahedronMesh (&tetrahedron_info);
+    state->meshes[GEO_TETRAHEDRON] =
+        PAL_CreateTetrahedronMesh (&tetrahedron_info);
     if (state->meshes[GEO_TETRAHEDRON] == NULL) return SDL_APP_FAILURE;
 
     // box mesh
-    PAL_BoxMeshCreateInfo box_info = {
-        .l = 1.0f,
-        .w = 1.0f,
-        .h = 1.0f,
-        .device = state->renderer->device
-    };
+    PAL_BoxMeshCreateInfo box_info =
+        {.l = 1.0f, .w = 1.0f, .h = 1.0f, .device = state->renderer->device};
     state->meshes[GEO_BOX] = PAL_CreateBoxMesh (&box_info);
     if (state->meshes[GEO_BOX] == NULL) return SDL_APP_FAILURE;
 
@@ -268,7 +282,8 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
         .radius = 0.5f,
         .device = state->renderer->device
     };
-    state->meshes[GEO_DODECAHEDRON] = PAL_CreateDodecahedronMesh (&dodecahedron_info);
+    state->meshes[GEO_DODECAHEDRON] =
+        PAL_CreateDodecahedronMesh (&dodecahedron_info);
     if (state->meshes[GEO_DODECAHEDRON] == NULL) return SDL_APP_FAILURE;
 
     // icosahedron
@@ -276,7 +291,8 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
         .radius = 0.5f,
         .device = state->renderer->device
     };
-    state->meshes[GEO_ICOSAHEDRON] = PAL_CreateIcosahedronMesh (&icosahedron_info);
+    state->meshes[GEO_ICOSAHEDRON] =
+        PAL_CreateIcosahedronMesh (&icosahedron_info);
     if (state->meshes[GEO_ICOSAHEDRON] == NULL) return SDL_APP_FAILURE;
 
     // capsule
@@ -359,7 +375,8 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
         .max_anisotropy = 1.0f,
         .enable_anisotropy = false
     };
-    SDL_GPUSampler* torus_sampler = SDL_CreateGPUSampler (state->renderer->device, &torus_sampler_info);
+    SDL_GPUSampler* torus_sampler =
+        SDL_CreateGPUSampler (state->renderer->device, &torus_sampler_info);
     PAL_PhongMaterialCreateInfo phong_info = {
         .renderer = state->renderer,
         .color = (SDL_FColor) {1.0f, 1.0f, 1.0f, 1.0f},
@@ -368,26 +385,39 @@ SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
         .texture = state->white_texture,
         .sampler = torus_sampler
     };
-    PAL_MaterialComponent* torus_material = PAL_CreatePhongMaterial (&phong_info);
+    PAL_MaterialComponent* torus_material =
+        PAL_CreatePhongMaterial (&phong_info);
     PAL_AddMaterialComponent (state->entity, torus_material);
 
     // torus transform
-    add_transform (
-        state->entity, (vec3) {0.0f, 0.0f, 0.0f}, (vec3) {0.0f, 0.0f, 0.0f},
-        (vec3) {1.0f, 1.0f, 1.0f}
-    );
+    PAL_TransformCreateInfo torus_transform_info = {
+        .position = (vec3) {0.0f, 0.0f, 0.0f},
+        .rotation = (vec3) {0.0f, 0.0f, 0.0f},
+        .scale = (vec3) {1.0f, 1.0f, 1.0f}
+    };
+    add_transform (state->entity, &torus_transform_info);
 
     // ambient light
     Entity ambient_light = create_entity ();
-    add_ambient_light (ambient_light, (SDL_FColor) {1.0f, 1.0f, 1.0f, 0.1f}, state->renderer);
+    PAL_AmbientLightCreateInfo ambient_info = {
+        .color = (SDL_FColor) {1.0f, 1.0f, 1.0f, 0.1f},
+        .renderer = state->renderer
+    };
+    add_ambient_light (ambient_light, &ambient_info);
 
     // point light
     Entity point_light = create_entity ();
-    add_transform (
-        point_light, (vec3) {2.0f, 2.0f, -2.0f}, (vec3) {0.0f, 0.0f, 0.0f},
-        (vec3) {1.0f, 1.0f, 1.0f}
-    );
-    add_point_light (point_light, (SDL_FColor) {1.0f, 1.0f, 1.0f, 1.0f}, state->renderer);
+    PAL_TransformCreateInfo point_light_transform_info = {
+        .position = (vec3) {2.0f, 2.0f, -2.0f},
+        .rotation = (vec3) {0.0f, 0.0f, 0.0f},
+        .scale = (vec3) {1.0f, 1.0f, 1.0f}
+    };
+    add_transform (point_light, &point_light_transform_info);
+    PAL_PointLightCreateInfo point_light_info = {
+        .color = (SDL_FColor) {1.0f, 1.0f, 1.0f, 1.0f},
+        .renderer = state->renderer
+    };
+    add_point_light (point_light, &point_light_info);
 
     state->last_time = SDL_GetPerformanceCounter ();
 
@@ -419,8 +449,10 @@ SDL_AppResult SDL_AppIterate (void* appstate) {
     UIComponent* ui = get_ui (state->player);
     mu_begin (&ui->context);
     if (state->settings) {
-        if (mu_begin_window (&ui->context, "Test Window", mu_rect (250, 250, 300, 240))) {
-            mu_layout_row (&ui->context, 1, (Uint32[]){80}, 0);
+        if (mu_begin_window (
+                &ui->context, "Test Window", mu_rect (250, 250, 300, 240)
+            )) {
+            mu_layout_row (&ui->context, 1, (Uint32[]) {80}, 0);
             mu_label (&ui->context, "Test label");
             uint8_slider (&ui->context, &state->test, 0, 255);
             mu_end_window (&ui->context);
@@ -431,18 +463,33 @@ SDL_AppResult SDL_AppIterate (void* appstate) {
     if (state->debug) {
         char buffer[64];
         sprintf (buffer, "Mesh render: %.1f", mesh_time_ms);
-        draw_text (ui, state->renderer->device, buffer, 5.0f, 5.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+        draw_text (
+            ui, state->renderer->device, buffer, 5.0f, 5.0f, 1.0f, 1.0f, 1.0f,
+            1.0f
+        );
         sprintf (buffer, "UI render: %.1f", ui_time_ms);
-        draw_text (ui, state->renderer->device, buffer, 5.0f, 17.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+        draw_text (
+            ui, state->renderer->device, buffer, 5.0f, 17.0f, 1.0f, 1.0f, 1.0f,
+            1.0f
+        );
         sprintf (buffer, "Total render: %.1f", render_time_ms);
-        draw_text (ui, state->renderer->device, buffer, 5.0f, 29.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+        draw_text (
+            ui, state->renderer->device, buffer, 5.0f, 29.0f, 1.0f, 1.0f, 1.0f,
+            1.0f
+        );
         if (state->frame_count % 60 == 0) {
             state->frame_rate = 1000.0f / render_time_ms;
         }
         sprintf (buffer, "Framerate: %.3f", state->frame_rate);
-        draw_text (ui, state->renderer->device, buffer, 5.0f, 41.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+        draw_text (
+            ui, state->renderer->device, buffer, 5.0f, 41.0f, 1.0f, 1.0f, 1.0f,
+            1.0f
+        );
     } else {
-        draw_text (ui, state->renderer->device, "f3: Debug Menu", 5.0f, 5.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+        draw_text (
+            ui, state->renderer->device, "f3: Debug Menu", 5.0f, 5.0f, 1.0f,
+            1.0f, 1.0f, 1.0f
+        );
     }
 
     TransformComponent transform = *get_transform (state->entity);
@@ -450,12 +497,20 @@ SDL_AppResult SDL_AppIterate (void* appstate) {
     rotation.x += 0.005f;
     rotation.z += 0.01f;
     transform.rotation = quat_from_euler (rotation);
-    add_transform (state->entity, transform.position, rotation, transform.scale);
+    PAL_TransformCreateInfo entity_transform_info = {
+        .position = transform.position,
+        .rotation = rotation,
+        .scale = transform.scale
+    };
+    add_transform (state->entity, &entity_transform_info);
 
     // camera forward vector
     if (!state->settings) fps_controller_update_system (dt);
 
-    render_system (state->renderer, cam, &state->prerender, &state->preui, &state->postrender);
+    render_system (
+        state->renderer, cam, &state->prerender, &state->preui,
+        &state->postrender
+    );
 
     return SDL_APP_CONTINUE;
 }
@@ -468,7 +523,8 @@ void SDL_AppQuit (void* appstate, SDL_AppResult result) {
     if (ui.rects) free (ui.rects);
     if (ui.pipeline)
         SDL_ReleaseGPUGraphicsPipeline (state->renderer->device, ui.pipeline);
-    if (ui.fragment) SDL_ReleaseGPUShader (state->renderer->device, ui.fragment);
+    if (ui.fragment)
+        SDL_ReleaseGPUShader (state->renderer->device, ui.fragment);
     if (ui.vertex) SDL_ReleaseGPUShader (state->renderer->device, ui.vertex);
 
     free_pools (state->renderer->device);
@@ -477,11 +533,13 @@ void SDL_AppQuit (void* appstate, SDL_AppResult result) {
     }
     // TODO: update free pools lol
     // if (state->renderer->sampler) {
-    //     SDL_ReleaseGPUSampler (state->renderer->device, state->renderer->sampler);
+    //     SDL_ReleaseGPUSampler (state->renderer->device,
+    //     state->renderer->sampler);
     // }
     if (state->renderer->depth_texture) {
-        SDL_ReleaseGPUTexture (state->renderer->device, state->renderer->depth_texture);
+        SDL_ReleaseGPUTexture (
+            state->renderer->device, state->renderer->depth_texture
+        );
     }
     free (state->renderer);
-
 }

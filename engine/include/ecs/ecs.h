@@ -97,7 +97,13 @@ Entity create_entity (void);
 void destroy_entity (SDL_GPUDevice* device, Entity e);
 
 // Transforms
-void add_transform (Entity e, vec3 pos, vec3 rot, vec3 scale);
+typedef struct {
+    vec3 position;
+    vec3 rotation;
+    vec3 scale;
+} PAL_TransformCreateInfo;
+
+void add_transform (Entity e, const PAL_TransformCreateInfo* info);
 TransformComponent* get_transform (Entity e);
 bool has_transform (Entity e);
 void remove_transform (Entity e);
@@ -118,13 +124,24 @@ void remove_material (
 ); // state for device release
 
 // Cameras
-void add_camera (Entity e, float fov, float near_clip, float far_clip);
+typedef struct {
+    float fov;
+    float near_clip;
+    float far_clip;
+} PAL_CameraCreateInfo;
+
+void add_camera (Entity e, const PAL_CameraCreateInfo* info);
 CameraComponent* get_camera (Entity e);
 bool has_camera (Entity e);
 void remove_camera (Entity e);
 
 // FPS Controllers
-void add_fps_controller (Entity e, float sense, float speed);
+typedef struct {
+    float mouse_sense;
+    float move_speed;
+} PAL_FpsControllerCreateInfo;
+
+void add_fps_controller (Entity e, const PAL_FpsControllerCreateInfo* info);
 FpsCameraControllerComponent* get_fps_controller (Entity e);
 bool has_fps_controller (Entity e);
 void remove_fps_controller (Entity e);
@@ -141,8 +158,13 @@ UIComponent* get_ui (Entity e);
 void remove_ui (Entity e);
 
 // renderer
-// TODO: render to arbitrary texture, not window
-// TODO: ASM_GPURendererCreateInfo struct
+typedef struct {
+    SDL_GPUDevice* device;
+    SDL_Window* window;
+    Uint32 width;
+    Uint32 height;
+} PAL_RendererCreateInfo;
+
 typedef struct {
     SDL_GPUDevice* device;
     SDL_Window* window;
@@ -157,23 +179,27 @@ typedef struct {
     SDL_GPUBuffer* point_ssbo;
     Uint32 point_size;
 } PAL_GPURenderer;
-PAL_GPURenderer* renderer_init (
-    SDL_GPUDevice* device,
-    SDL_Window* window,
-    const Uint32 width,
-    const Uint32 height
-);
+
+PAL_GPURenderer* renderer_init (const PAL_RendererCreateInfo* info);
 
 // Ambient Lights
-// rgba -> rgb + intensity
-void add_ambient_light (Entity e, SDL_FColor color, PAL_GPURenderer* renderer);
+typedef struct {
+    SDL_FColor color;
+    PAL_GPURenderer* renderer;
+} PAL_AmbientLightCreateInfo;
+
+void add_ambient_light (Entity e, const PAL_AmbientLightCreateInfo* info);
 AmbientLightComponent* get_ambient_light (Entity e);
 bool has_ambient_light (Entity e);
 void remove_ambient_light (Entity e);
 
 // Point Lights
-// rgba -> rgb + intensity
-void add_point_light (Entity e, SDL_FColor color, PAL_GPURenderer* renderer);
+typedef struct {
+    SDL_FColor color;
+    PAL_GPURenderer* renderer;
+} PAL_PointLightCreateInfo;
+
+void add_point_light (Entity e, const PAL_PointLightCreateInfo* info);
 PointLightComponent* get_point_light (Entity e);
 bool has_point_light (Entity e);
 void remove_point_light (Entity e);

@@ -141,9 +141,12 @@ void destroy_entity (SDL_GPUDevice* device, Entity e) {
 }
 
 // Transforms
-void add_transform (Entity e, vec3 pos, vec3 rot, vec3 scale) {
-    TransformComponent comp =
-        {.position = pos, .rotation = quat_from_euler (rot), .scale = scale};
+void add_transform (Entity e, const PAL_TransformCreateInfo* info) {
+    TransformComponent comp = {
+        .position = info->position,
+        .rotation = quat_from_euler (info->rotation),
+        .scale = info->scale
+    };
     pool_add (&transform_pool, e, &comp, sizeof (TransformComponent));
 }
 TransformComponent* get_transform (Entity e) {
@@ -163,7 +166,9 @@ void PAL_AddMeshComponent (Entity e, PAL_MeshComponent* mesh) {
     pool_add (&mesh_pool, e, &mesh, sizeof (PAL_MeshComponent*));
 }
 PAL_MeshComponent* PAL_GetMeshComponent (Entity e) {
-    PAL_MeshComponent** mesh = (PAL_MeshComponent**) pool_get (&mesh_pool, e, sizeof (PAL_MeshComponent*));
+    PAL_MeshComponent** mesh = (PAL_MeshComponent**) pool_get (
+        &mesh_pool, e, sizeof (PAL_MeshComponent*)
+    );
     return *mesh;
 }
 bool has_mesh (Entity e) {
@@ -203,16 +208,18 @@ void remove_material (SDL_GPUDevice* device, Entity e) {
             SDL_ReleaseGPUShader (device, mat->vertex_shader);
         if (mat->fragment_shader)
             SDL_ReleaseGPUShader (device, mat->fragment_shader);
-        if (mat->sampler)
-            SDL_ReleaseGPUSampler (device, mat->sampler);
+        if (mat->sampler) SDL_ReleaseGPUSampler (device, mat->sampler);
     }
     pool_remove (&material_pool, e, sizeof (PAL_MaterialComponent));
 }
 
 // Cameras
-void add_camera (Entity e, float fov, float near_clip, float far_clip) {
-    CameraComponent comp =
-        {.fov = fov, .near_clip = near_clip, .far_clip = far_clip};
+void add_camera (Entity e, const PAL_CameraCreateInfo* info) {
+    CameraComponent comp = {
+        .fov = info->fov,
+        .near_clip = info->near_clip,
+        .far_clip = info->far_clip
+    };
     pool_add (&camera_pool, e, &comp, sizeof (CameraComponent));
 }
 CameraComponent* get_camera (Entity e) {
@@ -228,10 +235,10 @@ void remove_camera (Entity e) {
 }
 
 // FPS Controllers
-void add_fps_controller (Entity e, float sense, float speed) {
+void add_fps_controller (Entity e, const PAL_FpsControllerCreateInfo* info) {
     FpsCameraControllerComponent comp = {
-        .mouse_sense = sense,
-        .move_speed = speed
+        .mouse_sense = info->mouse_sense,
+        .move_speed = info->move_speed
     };
     pool_add (
         &fps_controller_pool, e, &comp, sizeof (FpsCameraControllerComponent)
@@ -276,8 +283,8 @@ void remove_ui (Entity e) {
 };
 
 // Ambient Lights
-void add_ambient_light (Entity e, SDL_FColor color, PAL_GPURenderer* renderer) {
-    AmbientLightComponent comp = color;
+void add_ambient_light (Entity e, const PAL_AmbientLightCreateInfo* info) {
+    AmbientLightComponent comp = info->color;
     pool_add (&ambient_light_pool, e, &comp, sizeof (AmbientLightComponent));
 
     GPUAmbientLight all_lights[ambient_light_pool.count];
@@ -293,20 +300,23 @@ void add_ambient_light (Entity e, SDL_FColor color, PAL_GPURenderer* renderer) {
 
     Uint32 ssbo_size = ambient_light_pool.count * sizeof (GPUAmbientLight);
     ssbo_size = ssbo_size > 1024 ? ssbo_size : 1024;
-    if (renderer->ambient_ssbo && renderer->ambient_size < ssbo_size) {
-        SDL_ReleaseGPUBuffer (renderer->device, renderer->ambient_ssbo);
-        renderer->ambient_ssbo = NULL;
-        renderer->ambient_size = 0;
+    if (info->renderer->ambient_ssbo &&
+        info->renderer->ambient_size < ssbo_size) {
+        SDL_ReleaseGPUBuffer (
+            info->renderer->device, info->renderer->ambient_ssbo
+        );
+        info->renderer->ambient_ssbo = NULL;
+        info->renderer->ambient_size = 0;
     }
 
-    if (renderer->ambient_ssbo == NULL) {
+    if (info->renderer->ambient_ssbo == NULL) {
         SDL_GPUBufferCreateInfo ssbo_info = {
             .size = ssbo_size,
             .usage = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ,
         };
-        renderer->ambient_ssbo =
-            SDL_CreateGPUBuffer (renderer->device, &ssbo_info);
-        if (renderer->ambient_ssbo == NULL) {
+        info->renderer->ambient_ssbo =
+            SDL_CreateGPUBuffer (info->renderer->device, &ssbo_info);
+        if (info->renderer->ambient_ssbo == NULL) {
             return;
         }
     }
@@ -316,32 +326,33 @@ void add_ambient_light (Entity e, SDL_FColor color, PAL_GPURenderer* renderer) {
         .size = ssbo_size,
     };
     SDL_GPUTransferBuffer* tbuf =
-        SDL_CreateGPUTransferBuffer (renderer->device, &tbuf_info);
-    void* map = SDL_MapGPUTransferBuffer (renderer->device, tbuf, false);
+        SDL_CreateGPUTransferBuffer (info->renderer->device, &tbuf_info);
+    void* map = SDL_MapGPUTransferBuffer (info->renderer->device, tbuf, false);
     if (map == NULL) {
-        SDL_ReleaseGPUTransferBuffer (renderer->device, tbuf);
+        SDL_ReleaseGPUTransferBuffer (info->renderer->device, tbuf);
         return;
     }
     memcpy (map, all_lights, sizeof (all_lights));
     GPUAmbientLight* mapped_light = (GPUAmbientLight*) map;
-    SDL_UnmapGPUTransferBuffer (renderer->device, tbuf);
+    SDL_UnmapGPUTransferBuffer (info->renderer->device, tbuf);
 
     // upload data
-    SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer (renderer->device);
+    SDL_GPUCommandBuffer* cmd =
+        SDL_AcquireGPUCommandBuffer (info->renderer->device);
     SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass (cmd);
     SDL_GPUTransferBufferLocation tbuf_loc = {
         .transfer_buffer = tbuf,
         .offset = 0,
     };
     SDL_GPUBufferRegion tbuf_region = {
-        .buffer = renderer->ambient_ssbo,
+        .buffer = info->renderer->ambient_ssbo,
         .offset = 0,
         .size = sizeof (all_lights),
     };
     SDL_UploadToGPUBuffer (pass, &tbuf_loc, &tbuf_region, false);
     SDL_EndGPUCopyPass (pass);
     SDL_SubmitGPUCommandBuffer (cmd);
-    SDL_ReleaseGPUTransferBuffer (renderer->device, tbuf);
+    SDL_ReleaseGPUTransferBuffer (info->renderer->device, tbuf);
 }
 AmbientLightComponent* get_ambient_light (Entity e) {
     return (AmbientLightComponent*) pool_get (
@@ -359,8 +370,8 @@ void remove_ambient_light (Entity e) {
 // TODO: bulk initialize point lights
 // TODO: communicate failure to caller
 // TODO: what if the transform is added after the point light?
-void add_point_light (Entity e, SDL_FColor color, PAL_GPURenderer* renderer) {
-    PointLightComponent comp = color;
+void add_point_light (Entity e, const PAL_PointLightCreateInfo* info) {
+    PointLightComponent comp = info->color;
     pool_add (&point_light_pool, e, &comp, sizeof (PointLightComponent));
 
     // reconstruct point light buffer
@@ -395,25 +406,27 @@ void add_point_light (Entity e, SDL_FColor color, PAL_GPURenderer* renderer) {
     // release existing ssbo if it's too small
     Uint32 ssbo_size = point_light_pool.count * sizeof (GPUPointLight);
     ssbo_size = ssbo_size > 1024 ? ssbo_size : 1024;
-    if (renderer->point_ssbo && renderer->point_size < ssbo_size) {
-        SDL_ReleaseGPUBuffer (renderer->device, renderer->point_ssbo);
-        renderer->point_ssbo = NULL;
-        renderer->point_size = 0;
+    if (info->renderer->point_ssbo && info->renderer->point_size < ssbo_size) {
+        SDL_ReleaseGPUBuffer (
+            info->renderer->device, info->renderer->point_ssbo
+        );
+        info->renderer->point_ssbo = NULL;
+        info->renderer->point_size = 0;
     }
 
     // if ssbo is uninitialized (or if it was released because too small),
     // create one
-    if (renderer->point_ssbo == NULL) {
+    if (info->renderer->point_ssbo == NULL) {
         SDL_GPUBufferCreateInfo ssbo_info = {
             .size = ssbo_size,
             .usage = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ
         };
-        renderer->point_ssbo =
-            SDL_CreateGPUBuffer (renderer->device, &ssbo_info);
-        if (renderer->point_ssbo == NULL) {
+        info->renderer->point_ssbo =
+            SDL_CreateGPUBuffer (info->renderer->device, &ssbo_info);
+        if (info->renderer->point_ssbo == NULL) {
             return;
         }
-        renderer->point_size = ssbo_size;
+        info->renderer->point_size = ssbo_size;
     }
 
     // create transfer buffer
@@ -422,32 +435,33 @@ void add_point_light (Entity e, SDL_FColor color, PAL_GPURenderer* renderer) {
         .size = ssbo_size
     };
     SDL_GPUTransferBuffer* tbuf =
-        SDL_CreateGPUTransferBuffer (renderer->device, &tbuf_info);
-    void* map = SDL_MapGPUTransferBuffer (renderer->device, tbuf, false);
+        SDL_CreateGPUTransferBuffer (info->renderer->device, &tbuf_info);
+    void* map = SDL_MapGPUTransferBuffer (info->renderer->device, tbuf, false);
     if (map == NULL) {
-        SDL_ReleaseGPUTransferBuffer (renderer->device, tbuf);
+        SDL_ReleaseGPUTransferBuffer (info->renderer->device, tbuf);
         return;
     }
     memcpy (map, all_lights, sizeof (all_lights));
     GPUPointLight* mapped_light = (GPUPointLight*) map;
-    SDL_UnmapGPUTransferBuffer (renderer->device, tbuf);
+    SDL_UnmapGPUTransferBuffer (info->renderer->device, tbuf);
 
     // upload data
-    SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer (renderer->device);
+    SDL_GPUCommandBuffer* cmd =
+        SDL_AcquireGPUCommandBuffer (info->renderer->device);
     SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass (cmd);
     SDL_GPUTransferBufferLocation tbuf_loc = {
         .transfer_buffer = tbuf,
         .offset = 0,
     };
     SDL_GPUBufferRegion tbuf_region = {
-        .buffer = renderer->point_ssbo,
+        .buffer = info->renderer->point_ssbo,
         .offset = 0,
         .size = sizeof (all_lights),
     };
     SDL_UploadToGPUBuffer (pass, &tbuf_loc, &tbuf_region, false);
     SDL_EndGPUCopyPass (pass);
     SDL_SubmitGPUCommandBuffer (cmd);
-    SDL_ReleaseGPUTransferBuffer (renderer->device, tbuf);
+    SDL_ReleaseGPUTransferBuffer (info->renderer->device, tbuf);
 }
 PointLightComponent* get_point_light (Entity e) {
     return (PointLightComponent*) pool_get (
@@ -461,37 +475,31 @@ void remove_point_light (Entity e) {
     pool_remove (&point_light_pool, e, sizeof (PointLightComponent));
 }
 
-// TODO: more robust???
-PAL_GPURenderer* renderer_init (
-    SDL_GPUDevice* device,
-    SDL_Window* window,
-    const Uint32 width,
-    const Uint32 height
-) {
+PAL_GPURenderer* renderer_init (const PAL_RendererCreateInfo* info) {
     // create renderer
     PAL_GPURenderer* renderer = calloc (1, sizeof (PAL_GPURenderer));
     if (renderer == NULL) {
         SDL_Log ("Failed to allocate GPU renderer.");
         return NULL;
     }
-    renderer->device = device;
-    renderer->window = window;
-    renderer->width = width;
-    renderer->dwidth = width;
-    renderer->height = height;
-    renderer->dheight = height;
+    renderer->device = info->device;
+    renderer->window = info->window;
+    renderer->width = info->width;
+    renderer->dwidth = info->width;
+    renderer->height = info->height;
+    renderer->dheight = info->height;
 
     // depth texture
     SDL_GPUTextureCreateInfo depth_info = {
         .type = SDL_GPU_TEXTURETYPE_2D,
         .format = SDL_GPU_TEXTUREFORMAT_D24_UNORM,
-        .width = width,
-        .height = height,
+        .width = info->width,
+        .height = info->height,
         .layer_count_or_depth = 1,
         .num_levels = 1,
         .usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET
     };
-    renderer->depth_texture = SDL_CreateGPUTexture (device, &depth_info);
+    renderer->depth_texture = SDL_CreateGPUTexture (info->device, &depth_info);
     if (renderer->depth_texture == NULL) {
         free (renderer);
         SDL_Log (
@@ -501,9 +509,10 @@ PAL_GPURenderer* renderer_init (
     }
 
     // texture format
-    renderer->format = SDL_GetGPUSwapchainTextureFormat (device, window);
+    renderer->format =
+        SDL_GetGPUSwapchainTextureFormat (info->device, info->window);
     if (renderer->format == SDL_GPU_TEXTUREFORMAT_INVALID) {
-        SDL_ReleaseGPUTexture (device, renderer->depth_texture);
+        SDL_ReleaseGPUTexture (info->device, renderer->depth_texture);
         free (renderer);
         SDL_Log ("Failed to get swapchain texture format: %s", SDL_GetError ());
         return NULL;
@@ -516,7 +525,7 @@ PAL_GPURenderer* renderer_init (
 
     renderer->point_ssbo = SDL_CreateGPUBuffer (renderer->device, &ssbo_info);
     if (renderer->point_ssbo == NULL) {
-        SDL_ReleaseGPUTexture (device, renderer->depth_texture);
+        SDL_ReleaseGPUTexture (info->device, renderer->depth_texture);
         free (renderer);
         return NULL;
     }
@@ -524,8 +533,8 @@ PAL_GPURenderer* renderer_init (
 
     renderer->ambient_ssbo = SDL_CreateGPUBuffer (renderer->device, &ssbo_info);
     if (renderer->ambient_ssbo == NULL) {
-        SDL_ReleaseGPUBuffer (device, renderer->point_ssbo);
-        SDL_ReleaseGPUTexture (device, renderer->depth_texture);
+        SDL_ReleaseGPUBuffer (info->device, renderer->point_ssbo);
+        SDL_ReleaseGPUTexture (info->device, renderer->depth_texture);
         free (renderer);
         return NULL;
     }

@@ -18,6 +18,14 @@
 #define MOUSE_SENSE 1.0f / 100.0f
 #define MOVEMENT_SPEED 3.0f
 
+typedef struct {
+    bool quit;
+    PAL_GPURenderer* renderer;
+    Entity camera_entity;
+    SDL_GPUTexture* white_texture;
+    Uint64 last_time;
+} AppState;
+
 Entity icosahedrons[8000];
 
 Uint64 frame_start;
@@ -43,20 +51,18 @@ SDL_AppResult SDL_AppEvent (void* appstate, SDL_Event* event) {
         break;
     }
 
-    fps_controller_event_system (state, event);
+    fps_controller_event_system (event);
 
     return SDL_APP_CONTINUE;
 }
 
-SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
+SDL_AppResult SDL_AppInit (void** appstate, int argc, char** argv) {
     SDL_SetAppMetadata (
-        "Asmadi Engine Box Geometry", "0.1.0", "xyz.lukeh.Asmadi-Engine"
+        "Asmadi Engine Stress Test", "0.1.0", "xyz.lukeh.Asmadi-Engine"
     );
 
     // create appstate
     AppState* state = (AppState*) calloc (1, sizeof (AppState));
-    state->width = STARTING_WIDTH;
-    state->height = STARTING_HEIGHT;
     state->camera_entity = (Entity) -1;
 
     // initialize SDL
@@ -66,55 +72,41 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
     }
 
     // Create window
-    state->window = SDL_CreateWindow (
-        "C Vulkan", state->width, state->height,
+    SDL_Window* window = SDL_CreateWindow (
+        "Stress Test - Icosahedrons", STARTING_WIDTH, STARTING_HEIGHT,
         SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN
     );
-    if (!state->window) {
+    if (!window) {
         SDL_Log ("Couldn't create window/renderer: %s", SDL_GetError ());
         return SDL_APP_FAILURE;
     }
 
     // create GPU device
-    state->device =
+    SDL_GPUDevice* device =
         SDL_CreateGPUDevice (SDL_GPU_SHADERFORMAT_SPIRV, false, NULL);
-    if (!state->device) {
+    if (!device) {
         SDL_Log ("Couldn't create SDL_GPU_DEVICE");
         return SDL_APP_FAILURE;
     }
-    if (!SDL_ClaimWindowForGPUDevice (state->device, state->window)) {
+    if (!SDL_ClaimWindowForGPUDevice (device, window)) {
         SDL_Log ("Couldn't claim window for GPU device: %s", SDL_GetError ());
         return SDL_APP_FAILURE;
     }
-    state->swapchain_format =
-        SDL_GetGPUSwapchainTextureFormat (state->device, state->window);
-    if (state->swapchain_format == SDL_GPU_TEXTUREFORMAT_INVALID) {
-        SDL_Log ("Failed to get swapchain texture format: %s", SDL_GetError ());
-        return SDL_APP_FAILURE;
-    }
 
-    // depth texture
-    SDL_GPUTextureCreateInfo depth_info = {
-        .type = SDL_GPU_TEXTURETYPE_2D,
-        .format = SDL_GPU_TEXTUREFORMAT_D24_UNORM,
-        .width = state->width,
-        .height = state->height,
-        .layer_count_or_depth = 1,
-        .num_levels = 1,
-        .usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET
+    PAL_RendererCreateInfo renderer_info = {
+        .device = device,
+        .window = window,
+        .width = STARTING_WIDTH,
+        .height = STARTING_HEIGHT
     };
-    state->depth_texture = SDL_CreateGPUTexture (state->device, &depth_info);
-    if (state->depth_texture == NULL) {
-        SDL_Log ("Failed to create depth texture: %s", SDL_GetError ());
+    state->renderer = renderer_init (&renderer_info);
+    if (state->renderer == NULL) {
         return SDL_APP_FAILURE;
     }
-    state->dwidth = state->width;
-    state->dheight = state->height;
 
     // load texture
-    state->white_texture = create_white_texture (state->device);
-    if (!state->white_texture)
-        return SDL_APP_FAILURE; // logging handled inside PAL_LoadTexture()
+    state->white_texture = create_white_texture (state->renderer->device);
+    if (!state->white_texture) return SDL_APP_FAILURE;
 
     // create sampler
     SDL_GPUSamplerCreateInfo sampler_info = {
@@ -127,50 +119,58 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
         .max_anisotropy = 1.0f,
         .enable_anisotropy = false
     };
-    state->sampler = SDL_CreateGPUSampler (state->device, &sampler_info);
-    if (!state->sampler) {
+    SDL_GPUSampler* sampler =
+        SDL_CreateGPUSampler (state->renderer->device, &sampler_info);
+    if (!sampler) {
         SDL_Log ("Failed to create sampler: %s", SDL_GetError ());
         return SDL_APP_FAILURE;
     }
 
     // spawn 8k icosahedrons
-    // we want to be able to handle way more (e.g., ~1000000)
-    // but I'll let my poor laptop rest now
-    // I suspect there's some inefficiency in the way the entity pool gets
-    // reallocated
-    // TODO: fix that
-    // also it'd be nice to be able to initialize the entity pool to some
-    // starting number if we know ahead of time that we need a lot.
-    for (Uint32 i = -10; i < 10; i++) {
-        for (Uint32 j = -10; j < 10; j++) {
-            for (Uint32 k = -10; k < 10; k++) {
+    for (int i = -10; i < 10; i++) {
+        for (int j = -10; j < 10; j++) {
+            for (int k = -10; k < 10; k++) {
                 Entity ico = create_entity ();
                 icosahedrons[(i + 10) * 400 + (j + 10) * 20 + (k + 10)] = ico;
-                PAL_MeshComponent icosahedron_mesh =
-                    PAL_CreateIcosahedronMesh (0.5, state->device);
-                if (icosahedron_mesh.vertex_buffer == NULL)
-                    return SDL_APP_FAILURE;
+
+                PAL_IcosahedronMeshCreateInfo mesh_info = {
+                    .radius = 0.5f,
+                    .device = state->renderer->device
+                };
+                PAL_MeshComponent* icosahedron_mesh =
+                    PAL_CreateIcosahedronMesh (&mesh_info);
+                if (icosahedron_mesh == NULL) return SDL_APP_FAILURE;
                 PAL_AddMeshComponent (ico, icosahedron_mesh);
 
-                vec3 color = {
-                    random_float (), random_float (), random_float ()
+                float r = (float) rand () / (float) RAND_MAX;
+                float g = (float) rand () / (float) RAND_MAX;
+                float b = (float) rand () / (float) RAND_MAX;
+
+                PAL_PhongMaterialCreateInfo mat_info = {
+                    .renderer = state->renderer,
+                    .color = (SDL_FColor) {r, g, b, 1.0f},
+                    .emissive = (SDL_FColor) {0.0f, 0.0f, 0.0f, 0.0f},
+                    .cullmode = SDL_GPU_CULLMODE_BACK,
+                    .texture = state->white_texture,
+                    .sampler = sampler
                 };
-                PAL_MaterialComponent icosahedron_material =
-                    PAL_CreatePhongMaterial (color, SIDE_FRONT, state);
-                if (icosahedron_material.vertex_shader == NULL)
-                    return SDL_APP_FAILURE;
+                PAL_MaterialComponent* icosahedron_material =
+                    PAL_CreatePhongMaterial (&mat_info);
+                if (icosahedron_material == NULL) return SDL_APP_FAILURE;
                 PAL_AddMaterialComponent (ico, icosahedron_material);
-                vec3 position = {
-                    2.0f * (float) i, 2.0f * (float) j, 2.0f * (float) k
+
+                PAL_TransformCreateInfo transform_info = {
+                    .position = (vec3) {2.0f * (float) i, 2.0f * (float) j,
+                                        2.0f * (float) k},
+                    .rotation = (vec3) {(float) rand () / (float) RAND_MAX *
+                                            2.0f * (float) M_PI,
+                                        (float) rand () / (float) RAND_MAX *
+                                            2.0f * (float) M_PI,
+                                        (float) rand () / (float) RAND_MAX *
+                                            2.0f * (float) M_PI},
+                    .scale = (vec3) {1.0f, 1.0f, 1.0f}
                 };
-                vec3 rotation = {
-                    random_float_range (0.0f, 2.0f * (float) M_PI),
-                    random_float_range (0.0f, 2.0f * (float) M_PI),
-                    random_float_range (0.0f, 2.0f * (float) M_PI),
-                };
-                add_transform (
-                    ico, position, rotation, (vec3) {1.0f, 1.0f, 1.0f}
-                );
+                add_transform (ico, &transform_info);
             }
         }
         printf ("spawned %d icos\n", (i + 11) * 400);
@@ -178,33 +178,54 @@ SDL_AppResult SDL_AppInit (void** appstate, Uint32 argc, char** argv) {
 
     // ambient light
     Entity ambient_light = create_entity ();
-    add_ambient_light (ambient_light, (vec3) {1.0f, 1.0f, 1.0f}, 0.1f);
+    PAL_AmbientLightCreateInfo ambient_info = {
+        .color = (SDL_FColor) {1.0f, 1.0f, 1.0f, 0.1f},
+        .renderer = state->renderer
+    };
+    add_ambient_light (ambient_light, &ambient_info);
 
     // four point lights for now
     for (Uint32 i = 0; i < 4; i++) {
         Entity point_light = create_entity ();
-        add_point_light (point_light, (vec3) {1.0f, 1.0f, 1.0f}, 1.0f);
-        vec3 position = {
-            (float) (random_int (-50, 50) * 2 + 1),
-            (float) (random_int (-50, 50) * 2 + 1),
-            (float) (random_int (-50, 50) * 2 + 1),
+        PAL_PointLightCreateInfo point_light_info = {
+            .color = (SDL_FColor) {1.0f, 1.0f, 1.0f, 1.0f},
+            .renderer = state->renderer
         };
-        add_transform (
-            point_light, position, (vec3) {0.0f, 0.0f, 0.0f},
-            (vec3) {1.0f, 1.0f, 1.0f}
-        );
+        add_point_light (point_light, &point_light_info);
+
+        int px = (rand () % 101) - 50;
+        int py = (rand () % 101) - 50;
+        int pz = (rand () % 101) - 50;
+        PAL_TransformCreateInfo light_transform_info = {
+            .position = (vec3) {(float) (px * 2 + 1), (float) (py * 2 + 1),
+                                (float) (pz * 2 + 1)},
+            .rotation = (vec3) {0.0f, 0.0f, 0.0f},
+            .scale = (vec3) {1.0f, 1.0f, 1.0f}
+        };
+        add_transform (point_light, &light_transform_info);
     }
 
     // camera
     Entity camera = create_entity ();
-    add_transform (
-        camera, (vec3) {0.0f, 0.0f, -2.0f}, (vec3) {0.0f, 0.0f, 0.0f},
-        (vec3) {1.0f, 1.0f, 1.0f}
-    );
-    add_camera (camera, STARTING_FOV, 0.01f, 1000.0f);
-    add_fps_controller (camera, MOUSE_SENSE, MOVEMENT_SPEED);
+    PAL_TransformCreateInfo camera_transform_info = {
+        .position = (vec3) {0.0f, 0.0f, -2.0f},
+        .rotation = (vec3) {0.0f, 0.0f, 0.0f},
+        .scale = (vec3) {1.0f, 1.0f, 1.0f}
+    };
+    add_transform (camera, &camera_transform_info);
+
+    PAL_CameraCreateInfo camera_info =
+        {.fov = STARTING_FOV, .near_clip = 0.01f, .far_clip = 1000.0f};
+    add_camera (camera, &camera_info);
+
+    PAL_FpsControllerCreateInfo fps_info = {
+        .mouse_sense = MOUSE_SENSE,
+        .move_speed = MOVEMENT_SPEED
+    };
+    add_fps_controller (camera, &fps_info);
+
     state->camera_entity = camera;
-    SDL_SetWindowRelativeMouseMode (state->window, true);
+    SDL_SetWindowRelativeMouseMode (window, true);
 
     state->last_time = SDL_GetPerformanceCounter ();
 
@@ -237,18 +258,22 @@ SDL_AppResult SDL_AppIterate (void* appstate) {
         rotation.x += 0.005f;
         rotation.z += 0.01f;
         transform.rotation = quat_from_euler (rotation);
-        add_transform (
-            icosahedron, transform.position, rotation, transform.scale
-        );
+        PAL_TransformCreateInfo transform_info = {
+            .position = transform.position,
+            .rotation = rotation,
+            .scale = transform.scale
+        };
+        add_transform (icosahedron, &transform_info);
     }
 
     rot_time = SDL_GetTicksNS () - frame_start;
     rot_time_ms = rot_time / 1e6;
 
     // camera forward vector
-    fps_controller_update_system (state, dt);
+    fps_controller_update_system (dt);
 
-    render_system (state);
+    Uint64 prerender, preui, postrender;
+    render_system (state->renderer, cam, &prerender, &preui, &postrender);
 
     render_time = SDL_GetTicksNS () - rot_time - frame_start;
     render_time_ms = render_time / 1e6;
@@ -262,14 +287,15 @@ SDL_AppResult SDL_AppIterate (void* appstate) {
 
 void SDL_AppQuit (void* appstate, SDL_AppResult result) {
     AppState* state = (AppState*) appstate;
-    free_pools (state);
+
+    free_pools (state->renderer->device);
     if (state->white_texture) {
-        SDL_ReleaseGPUTexture (state->device, state->white_texture);
+        SDL_ReleaseGPUTexture (state->renderer->device, state->white_texture);
     }
-    if (state->sampler) {
-        SDL_ReleaseGPUSampler (state->device, state->sampler);
+    if (state->renderer->depth_texture) {
+        SDL_ReleaseGPUTexture (
+            state->renderer->device, state->renderer->depth_texture
+        );
     }
-    if (state->depth_texture) {
-        SDL_ReleaseGPUTexture (state->device, state->depth_texture);
-    }
+    free (state->renderer);
 }
