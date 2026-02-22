@@ -124,8 +124,8 @@ PAL_MaterialComponent* PAL_CreatePhongMaterial (const PAL_PhongMaterialCreateInf
         .emissive = info->emissive,
         .texture = info->texture,
         .sampler = info->sampler,
-        .vertex_shader = NULL,
-        .fragment_shader = NULL,
+        .vertex_shader = vertex_shader,
+        .fragment_shader = fragment_shader,
         .pipeline = pipeline
     };
 

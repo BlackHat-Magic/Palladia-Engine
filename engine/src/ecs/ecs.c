@@ -137,6 +137,7 @@ void destroy_entity (SDL_GPUDevice* device, Entity e) {
     remove_billboard (e);
     remove_ambient_light (e);
     remove_point_light (e);
+    remove_ui (e);
 }
 
 // Transforms
@@ -176,7 +177,7 @@ void remove_mesh (SDL_GPUDevice* device, Entity e) {
         if (mesh->index_buffer)
             SDL_ReleaseGPUBuffer (device, mesh->index_buffer);
     }
-    pool_remove (&mesh_pool, e, sizeof (PAL_MeshComponent));
+    pool_remove (&mesh_pool, e, sizeof (PAL_MeshComponent*));
 }
 
 // Materials
@@ -202,6 +203,8 @@ void remove_material (SDL_GPUDevice* device, Entity e) {
             SDL_ReleaseGPUShader (device, mat->vertex_shader);
         if (mat->fragment_shader)
             SDL_ReleaseGPUShader (device, mat->fragment_shader);
+        if (mat->sampler)
+            SDL_ReleaseGPUSampler (device, mat->sampler);
     }
     pool_remove (&material_pool, e, sizeof (PAL_MaterialComponent));
 }
@@ -974,4 +977,8 @@ void free_pools (SDL_GPUDevice* device) {
     free (point_light_pool.data);
     free (point_light_pool.entity_to_index);
     free (point_light_pool.index_to_entity);
+
+    free (ui_pool.data);
+    free (ui_pool.entity_to_index);
+    free (ui_pool.index_to_entity);
 }

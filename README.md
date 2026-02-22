@@ -18,53 +18,15 @@ The main goal with this project was to learn graphics programming. In game devel
 
 ### Features
 
-- [ ] Three.js-like API for creating simple geometries
-    - [X] ~~Box~~
-    - [X] ~~Plane~~
-    - [X] ~~Capsule~~
-    - [X] ~~Circle~~
-    - [X] ~~Cone~~
-    - [X] ~~Cylinder~~
-    - [X] ~~Dodecahedron~~
-    - [ ] Extrude
-    - [X] ~~Icosahedron~~
-    - [X] ~~Lathe~~
-    - [X] ~~Octahedron~~
-    - [X] ~~Ring~~
-    - [ ] Shape
-    - [X] ~~Sphere~~
-    - [ ] Ico Sphere
-    - [ ] That one other sphere... you know the one
-    - [X] ~~Tetrahedron~~
-    - [X] ~~Torus~~
-    - [ ] Torus Knot?
-    - [ ] Tube
-    - [ ] GLTF loader
-- [ ] Various Math Tools
-    - [X] ~~Random Integers~~
-    - [X] ~~Random Floats~~
-    - [X] ~~Random Choice~~
-    - [ ] Weighted Randomness
-    - [ ] Splines
-    - [ ] LERP
-- [ ] Materials
-    - [X] ~~Basic Material~~
-    - [ ] Depth Material
-    - [ ] Distance Material?
-    - [ ] Lambert Material
-    - [ ] Matcap Material?
-    - [ ] Normal Material
-    - [X] ~~Phong Material~~
-    - [ ] Standard/Physical Material
-    - [ ] Toon Material
-    - [ ] UV Mapping for Mesh Primitives
+- Three.js-like API for creating simple geometries
+- Random number generation and spline tools
+- Premade Materials
 - [ ] Character Controllers
 - [ ] Physics
     - [ ] TinyPhysicsEngine-like soft body physics for embedded devices
     - [ ] SDF-based primitive-only collision system
     - [ ] Conventional primitive and mesh collision system with soft body support
-- [ ] Lighting
-    - [ ] Directional Ambient Lights
+- [ ] Lighting: point lights and ambient lights
 - [ ] Performance Profiler
 - [ ] Software Rasterizer
 - [ ] Fixed-Point Software Rasterizer
