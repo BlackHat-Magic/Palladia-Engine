@@ -5,6 +5,5 @@ pub const c = @cImport({
     @cInclude("SDL3_image/SDL_image.h");
     @cDefine("SDL_MAIN_HANDLED", {});
     @cInclude("SDL3/SDL_main.h");
-    // @cInclude("SDL3_ttf/SDL_ttf");
-    // @cInclude("microui.h");
+    @cInclude("SDL3_ttf/SDL_ttf.h");
 });
