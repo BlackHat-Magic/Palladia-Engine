@@ -30,3 +30,5 @@ The main goal with this project was to learn graphics programming. In game devel
 - [ ] Performance Profiler
 - [ ] Software Rasterizer
 - [ ] Fixed-Point Software Rasterizer
+
+TODO: Billboard component

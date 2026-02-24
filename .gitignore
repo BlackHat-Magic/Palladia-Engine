@@ -4,3 +4,5 @@
 .cache/
 create_dump.sh
 project_dump.md
+**/.zig-cache
+**/zig-out/

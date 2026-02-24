@@ -1,27 +1,36 @@
 const std = @import("std");
-const zig = @import("zig");
+const palladia = @import("palladia");
 
 pub fn main() !void {
-    // Prints to stderr, ignoring potential errors.
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
-    try zig.bufferedPrint();
+    std.debug.print("Palladia Engine\n", .{});
 }
 
-test "simple test" {
-    const gpa = std.testing.allocator;
-    var list: std.ArrayList(i32) = .empty;
-    defer list.deinit(gpa); // Try commenting this out and see if zig detects the memory leak!
-    try list.append(gpa, 42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
-}
-
-test "fuzz example" {
-    const Context = struct {
-        fn testOne(context: @This(), input: []const u8) anyerror!void {
-            _ = context;
-            // Try passing `--fuzz` to `zig build test` and see if it manages to fail this test case!
-            try std.testing.expect(!std.mem.eql(u8, "canyoufindme", input));
-        }
+test "ECS basic usage" {
+    const MyComponents = struct {
+        transform: palladia.Transform,
+        health: struct { current: f32, max: f32 },
     };
-    try std.testing.fuzz(Context{}, Context.testOne, .{});
+
+    const MyWorld = palladia.World(MyComponents);
+
+    var world = MyWorld.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = world.createEntity();
+    try world.add("transform", entity, .{ .position = .{ 1, 2, 3 } });
+    try world.add("health", entity, .{ .current = 100, .max = 100 });
+
+    try std.testing.expect(world.has("transform", entity));
+    try std.testing.expect(world.has("health", entity));
+
+    if (world.get("health", entity)) |h| {
+        h.current -= 10;
+    }
+
+    if (world.getConst("health", entity)) |h| {
+        try std.testing.expectEqual(@as(f32, 90), h.current);
+    }
+
+    try world.remove("health", entity);
+    try std.testing.expect(!world.has("health", entity));
 }
