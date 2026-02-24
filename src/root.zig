@@ -1,9 +1,9 @@
 const std = @import("std");
 
 pub const ecs = struct {
-    pub const Entity = @import("ecs/pool.zig").Entity;
-    pub const Pool = @import("ecs/pool.zig").Pool;
-    pub const World = @import("ecs/world.zig").World;
+    pub const Entity = @import("pool.zig").Entity;
+    pub const Pool = @import("pool.zig").Pool;
+    pub const World = @import("world.zig").World;
 };
 
 pub const components = struct {
