@@ -2,15 +2,13 @@
 
 # Palladia Engine
 
-(Formerly Asmadi)
-
-A Simple, ECS-based game engine written in C using SDL3's GPU API
+A Simple, ECS-based game engine written in Zig using SDL3's GPU API
 
 </div>
 
 ## Overview
 
-The Asmadi Palladia Engine is a game engine using SDL3's GPU API to create 3D accelerated graphical applications with Vulkan (and soon hopefully WebGPU). I might add Metal support if I feel like it.
+The Palladia Engine is a game engine using SDL3's GPU API to create 3D accelerated graphical applications with Vulkan (and soon hopefully WebGPU). I might add Metal support if I feel like it.
 
 ### Goals
 
@@ -32,3 +30,4 @@ The main goal with this project was to learn graphics programming. In game devel
 - [ ] Fixed-Point Software Rasterizer
 
 TODO: Billboard component
+TODO: separate registry for GPU resources (i.e., components do not own their GPU resources)

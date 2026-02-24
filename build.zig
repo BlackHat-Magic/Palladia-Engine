@@ -18,6 +18,7 @@ pub fn build(b: *std.Build) void {
 
     mod.linkLibrary(sdl_lib);
     mod.linkLibrary(sdl_test_lib);
+    mod.linkSystemLibrary("SDL3_image", .{});
 
     const exe = b.addExecutable(.{
         .name = "palladia",
