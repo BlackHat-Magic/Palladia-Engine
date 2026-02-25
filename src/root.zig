@@ -101,12 +101,34 @@ pub const geometry = struct {
     pub const createDodecahedron = @import("geometry/dodecahedron.zig").createDodecahedron;
 };
 
+pub const shader = struct {
+    pub const VertexShader = @import("shader/module.zig").VertexShader;
+    pub const FragmentShader = @import("shader/module.zig").FragmentShader;
+    pub const Stage = @import("shader/module.zig").Stage;
+};
+
 pub const material = struct {
     pub const loadShader = @import("material/common.zig").loadShader;
+    pub const loadShaderFromBytes = @import("material/common.zig").loadShaderFromBytes;
     pub const loadTexture = @import("material/common.zig").loadTexture;
     pub const createWhiteTexture = @import("material/common.zig").createWhiteTexture;
-    pub const createPhongMaterial = @import("material/phong.zig").createPhongMaterial;
+    pub const createDefaultSampler = @import("material/common.zig").createDefaultSampler;
+
     pub const createBasicMaterial = @import("material/basic.zig").createBasicMaterial;
+    pub const BasicMaterialArgs = @import("material/basic.zig").BasicMaterialArgs;
+    pub const basic_material_vert_spv = @import("material/basic.zig").basic_material_vert_spv;
+    pub const basic_material_frag_spv = @import("material/basic.zig").basic_material_frag_spv;
+
+    pub const createPhongMaterial = @import("material/phong.zig").createPhongMaterial;
+    pub const PhongMaterialArgs = @import("material/phong.zig").PhongMaterialArgs;
+    pub const phong_material_vert_spv = @import("material/phong.zig").phong_material_vert_spv;
+    pub const phong_material_frag_spv = @import("material/phong.zig").phong_material_frag_spv;
+
+    pub const createUIMaterial = @import("material/ui.zig").createUIMaterial;
+    pub const UIMaterialArgs = @import("material/ui.zig").UIMaterialArgs;
+    pub const UIVertex = @import("material/ui.zig").UIVertex;
+    pub const ui_vert_spv = @import("material/ui.zig").ui_vert_spv;
+    pub const ui_frag_spv = @import("material/ui.zig").ui_frag_spv;
 };
 
 pub const World = ecs.World;

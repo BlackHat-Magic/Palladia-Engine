@@ -7,43 +7,53 @@ const loadShader = common.loadShader;
 const loadShaderFromBytes = common.loadShaderFromBytes;
 const createWhiteTexture = common.createWhiteTexture;
 
-pub const basic_material_vert_spv align(4) = @embedFile("../shaders/spirv/basic_material.vert.spv");
-pub const basic_material_frag_spv align(4) = @embedFile("../shaders/spirv/basic_material.frag.spv");
+pub const ui_vert_spv align(4) = @embedFile("../shaders/spirv/ui.vert.spv");
+pub const ui_frag_spv align(4) = @embedFile("../shaders/spirv/ui.frag.spv");
 
-pub const BasicMaterialArgs = struct {
-    color: sdl.SDL_FColor = .{ .r = 1.0, .g = 1.0, .b = 1.0, .a = 1.0 },
-    cullmode: sdl.SDL_GPUCullMode = sdl.SDL_GPU_CULLMODE_BACK,
+pub const UIMaterialArgs = struct {
     texture: ?*sdl.SDL_GPUTexture = null,
     sampler: ?*sdl.SDL_GPUSampler = null,
 };
 
-pub fn createBasicMaterial(
+pub fn createUIMaterial(
     device: *sdl.SDL_GPUDevice,
     format: sdl.SDL_GPUTextureFormat,
-    args: BasicMaterialArgs,
+    args: UIMaterialArgs,
 ) !MaterialComponent {
     const vertex_shader = try loadShaderFromBytes(
         device,
-        basic_material_vert_spv,
+        ui_vert_spv,
         sdl.SDL_GPU_SHADERSTAGE_VERTEX,
-        .{ .sampler_count = 0, .uniform_buffer_count = 2, .storage_buffer_count = 0 },
+        .{ .sampler_count = 0, .uniform_buffer_count = 0, .storage_buffer_count = 0 },
     );
     errdefer sdl.SDL_ReleaseGPUShader(device, vertex_shader);
 
     const fragment_shader = try loadShaderFromBytes(
         device,
-        basic_material_frag_spv,
+        ui_frag_spv,
         sdl.SDL_GPU_SHADERSTAGE_FRAGMENT,
-        .{ .sampler_count = 1, .uniform_buffer_count = 1, .storage_buffer_count = 2 },
+        .{ .sampler_count = 1, .uniform_buffer_count = 0, .storage_buffer_count = 0 },
     );
     errdefer sdl.SDL_ReleaseGPUShader(device, fragment_shader);
 
     const pipe_info = sdl.SDL_GPUGraphicsPipelineCreateInfo{
         .target_info = .{
             .num_color_targets = 1,
-            .color_target_descriptions = &[_]sdl.SDL_GPUColorTargetDescription{.{ .format = format }},
-            .has_depth_stencil_target = true,
-            .depth_stencil_format = sdl.SDL_GPU_TEXTUREFORMAT_D24_UNORM,
+            .color_target_descriptions = &[_]sdl.SDL_GPUColorTargetDescription{.{
+                .format = format,
+                .blend_state = .{
+                    .enable_blend = true,
+                    .src_color_blendfactor = sdl.SDL_GPU_BLENDFACTOR_SRC_ALPHA,
+                    .dst_color_blendfactor = sdl.SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                    .color_blend_op = sdl.SDL_GPU_BLENDOP_ADD,
+                    .src_alpha_blendfactor = sdl.SDL_GPU_BLENDFACTOR_SRC_ALPHA,
+                    .dst_alpha_blendfactor = sdl.SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                    .alpha_blend_op = sdl.SDL_GPU_BLENDOP_ADD,
+                    .color_write_mask = 0xF,
+                    .enable_color_write_mask = true,
+                },
+            }},
+            .has_depth_stencil_target = false,
         },
         .primitive_type = sdl.SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
         .vertex_shader = vertex_shader,
@@ -51,28 +61,23 @@ pub fn createBasicMaterial(
         .vertex_input_state = .{
             .vertex_buffer_descriptions = &[_]sdl.SDL_GPUVertexBufferDescription{.{
                 .slot = 0,
-                .pitch = 8 * @sizeOf(f32),
+                .pitch = @sizeOf(UIVertex),
                 .input_rate = sdl.SDL_GPU_VERTEXINPUTRATE_VERTEX,
                 .instance_step_rate = 0,
             }},
             .num_vertex_buffers = 1,
-            .num_vertex_attributes = 3,
+            .num_vertex_attributes = 4,
             .vertex_attributes = &[_]sdl.SDL_GPUVertexAttribute{
-                .{ .location = 0, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3, .offset = 0 },
-                .{ .location = 1, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3, .offset = 3 * @sizeOf(f32) },
-                .{ .location = 2, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = 6 * @sizeOf(f32) },
+                .{ .location = 0, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIVertex, "position") },
+                .{ .location = 1, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIVertex, "res") },
+                .{ .location = 2, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4, .offset = @offsetOf(UIVertex, "color") },
+                .{ .location = 3, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIVertex, "uv") },
             },
         },
         .rasterizer_state = .{
             .fill_mode = sdl.SDL_GPU_FILLMODE_FILL,
-            .cull_mode = args.cullmode,
+            .cull_mode = sdl.SDL_GPU_CULLMODE_NONE,
             .front_face = sdl.SDL_GPU_FRONTFACE_CLOCKWISE,
-        },
-        .depth_stencil_state = .{
-            .enable_depth_test = true,
-            .enable_depth_write = true,
-            .compare_op = sdl.SDL_GPU_COMPAREOP_LESS,
-            .enable_stencil_test = false,
         },
         .multisample_state = .{
             .sample_count = sdl.SDL_GPU_SAMPLECOUNT_1,
@@ -89,7 +94,7 @@ pub fn createBasicMaterial(
     errdefer sdl.SDL_ReleaseGPUTexture(device, white_tex);
 
     return .{
-        .color = args.color,
+        .color = .{ .r = 1, .g = 1, .b = 1, .a = 1 },
         .emissive = .{ .r = 0, .g = 0, .b = 0, .a = 1 },
         .texture = args.texture orelse white_tex,
         .sampler = args.sampler,
@@ -98,3 +103,10 @@ pub fn createBasicMaterial(
         .pipeline = pipeline.?,
     };
 }
+
+pub const UIVertex = extern struct {
+    position: [2]f32,
+    res: [2]f32,
+    color: [4]f32,
+    uv: [2]f32,
+};

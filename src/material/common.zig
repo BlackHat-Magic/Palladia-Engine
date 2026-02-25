@@ -1,6 +1,38 @@
 const std = @import("std");
 const sdl = @import("../sdl.zig").c;
 
+pub fn loadShaderFromBytes(
+    device: *sdl.SDL_GPUDevice,
+    code: []const u8,
+    stage: sdl.SDL_GPUShaderStage,
+    comptime args: struct {
+        sampler_count: u32 = 0,
+        uniform_buffer_count: u32 = 0,
+        storage_buffer_count: u32 = 0,
+        storage_texture_count: u32 = 0,
+    },
+) !*sdl.SDL_GPUShader {
+    const shader_info = sdl.SDL_GPUShaderCreateInfo{
+        .code = code.ptr,
+        .code_size = code.len,
+        .entrypoint = "main",
+        .format = sdl.SDL_GPU_SHADERFORMAT_SPIRV,
+        .stage = stage,
+        .num_samplers = args.sampler_count,
+        .num_uniform_buffers = args.uniform_buffer_count,
+        .num_storage_buffers = args.storage_buffer_count,
+        .num_storage_textures = args.storage_texture_count,
+    };
+
+    const shader = sdl.SDL_CreateGPUShader(device, &shader_info);
+    if (shader == null) {
+        std.log.err("Couldn't create GPU Shader from embedded bytes: {s}\n", .{sdl.SDL_GetError()});
+        return error.ShaderCreateFailed;
+    }
+
+    return shader.?;
+}
+
 pub fn loadShader(
     device: *sdl.SDL_GPUDevice,
     filename: [:0]const u8,
@@ -27,7 +59,7 @@ pub fn loadShader(
     defer sdl.SDL_free(code);
 
     const shader_info = sdl.SDL_GPUShaderCreateInfo{
-        .code = code,
+        .code = @ptrCast(code),
         .code_size = code_size,
         .entrypoint = "main",
         .format = sdl.SDL_GPU_SHADERFORMAT_SPIRV,
@@ -44,7 +76,7 @@ pub fn loadShader(
         return error.ShaderCreateFailed;
     }
 
-    return shader;
+    return shader.?;
 }
 
 pub fn loadTexture(device: *sdl.SDL_GPUDevice, file_path: [:0]const u8) !*sdl.SDL_GPUTexture {
@@ -230,4 +262,23 @@ pub fn createWhiteTexture(device: *sdl.SDL_GPUDevice) !*sdl.SDL_GPUTexture {
     sdl.SDL_ReleaseGPUTransferBuffer(device, trans);
 
     return tex.?;
+}
+
+pub fn createDefaultSampler(device: *sdl.SDL_GPUDevice) !*sdl.SDL_GPUSampler {
+    const sampler_info = sdl.SDL_GPUSamplerCreateInfo{
+        .min_filter = sdl.SDL_GPU_FILTER_LINEAR,
+        .mag_filter = sdl.SDL_GPU_FILTER_LINEAR,
+        .mipmap_mode = sdl.SDL_GPU_SAMPLERMIPMAPMODE_LINEAR,
+        .address_mode_u = sdl.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+        .address_mode_v = sdl.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+        .address_mode_w = sdl.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+    };
+
+    const sampler = sdl.SDL_CreateGPUSampler(device, &sampler_info);
+    if (sampler == null) {
+        std.log.err("Failed to create sampler: {s}\n", .{sdl.SDL_GetError()});
+        return error.SamplerCreateFailed;
+    }
+
+    return sampler.?;
 }

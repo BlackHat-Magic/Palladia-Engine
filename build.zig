@@ -4,6 +4,8 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const compile_shaders = b.option(bool, "compile-shaders", "Compile GLSL shaders to SPIR-V (default: true)") orelse true;
+
     const mod = b.addModule("palladia", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
@@ -19,6 +21,42 @@ pub fn build(b: *std.Build) void {
     mod.linkLibrary(sdl_lib);
     mod.linkLibrary(sdl_test_lib);
     mod.linkSystemLibrary("SDL3_image", .{});
+
+    const shader_step = b.step("shaders", "Compile built-in shaders to SPIR-V");
+
+    if (compile_shaders) {
+        const shaders = [_][]const u8{
+            "basic_material.vert",
+            "basic_material.frag",
+            "phong_material.vert",
+            "phong_material.frag",
+            "ui.vert",
+            "ui.frag",
+        };
+
+        const glslang = b.findProgram(&.{"glslangValidator"}, &.{}) catch null;
+
+        if (glslang) |glslang_path| {
+            inline for (shaders) |shader| {
+                const input = b.path(b.fmt("src/shaders/glsl/{s}", .{shader}));
+                const output_name = b.fmt("{s}.spv", .{shader});
+
+                const run = b.addSystemCommand(&.{
+                    glslang_path,
+                    "-V",
+                    "-o",
+                });
+                const output = run.addOutputFileArg(output_name);
+                run.addFileArg(input);
+                run.addArgs(&.{ "--target-env", "vulkan1.3" });
+
+                shader_step.dependOn(&run.step);
+                _ = output;
+            }
+        } else {
+            std.log.warn("glslangValidator not found, shader compilation disabled", .{});
+        }
+    }
 
     const exe = b.addExecutable(.{
         .name = "palladia",
@@ -60,4 +98,39 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_mod_tests.step);
     test_step.dependOn(&run_exe_tests.step);
+}
+
+pub const ShaderSpec = struct {
+    source: std.Build.LazyPath,
+    name: []const u8,
+};
+
+pub fn ShaderCompile(b: *std.Build, specs: []const ShaderSpec) *std.Build.Step {
+    const glslang_opt = b.findProgram(&.{"glslangValidator"}, &.{}) catch null;
+    const glslang_path = glslang_opt orelse @panic("glslangValidator not found. Install it to compile shaders.");
+
+    const step = b.allocator.create(std.Build.Step) catch @panic("OOM");
+    step.* = std.Build.Step.init(.{
+        .id = .custom,
+        .name = "compile shaders",
+        .owner = b,
+    });
+
+    for (specs) |spec| {
+        const output_name = b.fmt("{s}.spv", .{spec.name});
+
+        const run = b.addSystemCommand(&.{
+            glslang_path,
+            "-V",
+            "-o",
+        });
+        const output = run.addOutputFileArg(output_name);
+        run.addFileArg(spec.source);
+        run.addArgs(&.{ "--target-env", "vulkan1.3" });
+
+        step.dependOn(&run.step);
+        _ = output;
+    }
+
+    return step;
 }

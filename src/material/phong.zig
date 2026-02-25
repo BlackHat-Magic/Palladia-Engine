@@ -4,31 +4,36 @@ const MaterialComponent = @import("../components/material.zig").MaterialComponen
 
 const common = @import("common.zig");
 const loadShader = common.loadShader;
+const loadShaderFromBytes = common.loadShaderFromBytes;
 const createWhiteTexture = common.createWhiteTexture;
+
+pub const phong_material_vert_spv align(4) = @embedFile("../shaders/spirv/phong_material.vert.spv");
+pub const phong_material_frag_spv align(4) = @embedFile("../shaders/spirv/phong_material.frag.spv");
+
+pub const PhongMaterialArgs = struct {
+    color: sdl.SDL_FColor = .{ .r = 1.0, .g = 1.0, .b = 1.0, .a = 1.0 },
+    emissive: sdl.SDL_FColor = .{ .r = 0.0, .g = 0.0, .b = 0.0, .a = 1.0 },
+    cullmode: sdl.SDL_GPUCullMode = sdl.SDL_GPU_CULLMODE_BACK,
+    texture: ?*sdl.SDL_GPUTexture = null,
+    sampler: ?*sdl.SDL_GPUSampler = null,
+};
 
 pub fn createPhongMaterial(
     device: *sdl.SDL_GPUDevice,
     format: sdl.SDL_GPUTextureFormat,
-    comptime args: struct {
-        color: sdl.SDL_FColor = .{ .r = 1.0, .g = 1.0, .b = 1.0, .a = 1.0 },
-        emissive: sdl.SDL_FColor = .{ .r = 0.0, .g = 0.0, .b = 0.0, .a = 1.0 },
-        cullmode: sdl.SDL_GPUCullMode = sdl.SDL_GPU_CULLMODE_BACK,
-        texture: ?*sdl.SDL_GPUTexture = null,
-        sampler: ?*sdl.SDL_GPUSampler = null,
-        shader_path: []const u8 = "shaders",
-    },
+    args: PhongMaterialArgs,
 ) !MaterialComponent {
-    const vertex_shader = try loadShader(
+    const vertex_shader = try loadShaderFromBytes(
         device,
-        try std.fmt.allocPrintZ(std.heap.page_allocator, "{s}/phong_material.vert.spv", .{args.shader_path}),
+        phong_material_vert_spv,
         sdl.SDL_GPU_SHADERSTAGE_VERTEX,
         .{ .sampler_count = 0, .uniform_buffer_count = 2, .storage_buffer_count = 0 },
     );
     errdefer sdl.SDL_ReleaseGPUShader(device, vertex_shader);
 
-    const fragment_shader = try loadShader(
+    const fragment_shader = try loadShaderFromBytes(
         device,
-        try std.fmt.allocPrintZ(std.heap.page_allocator, "{s}/phong_material.frag.spv", .{args.shader_path}),
+        phong_material_frag_spv,
         sdl.SDL_GPU_SHADERSTAGE_FRAGMENT,
         .{ .sampler_count = 1, .uniform_buffer_count = 1, .storage_buffer_count = 2 },
     );
@@ -81,20 +86,6 @@ pub fn createPhongMaterial(
         return error.PipelineCreateFailed;
     }
 
-    const cmd = sdl.SDL_AcquireGPUCommandBuffer(device) orelse {
-        sdl.SDL_ReleaseGPUGraphicsPipeline(device, pipeline);
-        return error.CommandBufferFailed;
-    };
-
-    const ubo_size = @sizeOf(sdl.SDL_FColor) * 2;
-    var fragment_ubo: [ubo_size]u8 = undefined;
-
-    @memcpy(fragment_ubo[0..@sizeOf(sdl.SDL_FColor)], std.mem.asBytes(&args.color));
-    @memcpy(fragment_ubo[@sizeOf(sdl.SDL_FColor)..], std.mem.asBytes(&args.emissive));
-
-    sdl.SDL_PushGPUFragmentUniformData(cmd, 0, &fragment_ubo, ubo_size);
-    sdl.SDL_SubmitGPUCommandBuffer(cmd);
-
     const white_tex = try createWhiteTexture(device);
     errdefer sdl.SDL_ReleaseGPUTexture(device, white_tex);
 
@@ -105,6 +96,6 @@ pub fn createPhongMaterial(
         .sampler = args.sampler,
         .vertex_shader = vertex_shader,
         .fragment_shader = fragment_shader,
-        .pipeline = pipeline,
+        .pipeline = pipeline.?,
     };
 }
