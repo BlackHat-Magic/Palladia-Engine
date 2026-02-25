@@ -117,6 +117,25 @@ pub fn build(b: *std.Build) void {
 
     const run_demo = b.addRunArtifact(demo_mesh);
     demo_step.dependOn(&run_demo.step);
+
+    const stress_test = b.addExecutable(.{
+        .name = "stress_test",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("examples/stress_test_ico_zig/main.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "palladia", .module = mod },
+            },
+        }),
+    });
+
+    const install_stress = b.addInstallArtifact(stress_test, .{});
+    const stress_step = b.step("stress", "Build and run the stress_test example");
+    stress_step.dependOn(&install_stress.step);
+
+    const run_stress = b.addRunArtifact(stress_test);
+    stress_step.dependOn(&run_stress.step);
 }
 
 pub const ShaderSpec = struct {
