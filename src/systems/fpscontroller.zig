@@ -1,8 +1,9 @@
 const std = @import("std");
 const sdl = @import("../sdl.zig").c;
 const math = @import("../math.zig");
-const SystemContext = @import("../system/context.zig").SystemContext;
 const SystemStage = @import("../system/context.zig").SystemStage;
+const Time = @import("../system/context.zig").Time;
+const Input = @import("../system/context.zig").Input;
 const Entity = @import("../pool.zig").Entity;
 const Transform = @import("../components/transform.zig").Transform;
 const FPSCameraController = @import("../components/fpscameracontroller.zig").FPSCameraController;
@@ -15,17 +16,18 @@ pub const FPSCameraEventSystem = struct {
         controller: *const FPSCameraController,
     };
 
-    pub fn runEntity(ctx: *const SystemContext, entity: Entity, q: Query) void {
-        _ = entity;
-        const event = ctx.event orelse return;
+    pub const Res = struct {
+        input: *const Input,
+    };
 
-        if (event.type != sdl.SDL_EVENT_MOUSE_MOTION) return;
+    pub fn runEntity(res: Res, entity: Entity, q: Query) void {
+        _ = entity;
 
         const ctrl = q.controller;
         const trans = q.transform;
 
-        const delta_yaw = event.motion.xrel * ctrl.mouse_sense;
-        const delta_pitch = event.motion.yrel * ctrl.mouse_sense;
+        const delta_yaw = res.input.mouse_xrel * ctrl.mouse_sense;
+        const delta_pitch = res.input.mouse_yrel * ctrl.mouse_sense;
 
         const dq_yaw = math.quatFromAxisAngle(.{ 0, 1, 0 }, delta_yaw);
         trans.rotation = math.quatMultiply(dq_yaw, trans.rotation);
@@ -56,32 +58,37 @@ pub const FPSCameraUpdateSystem = struct {
         controller: *const FPSCameraController,
     };
 
-    pub fn runEntity(ctx: *const SystemContext, entity: Entity, q: Query) void {
+    pub const Res = struct {
+        time: *const Time,
+        input: *const Input,
+    };
+
+    pub fn runEntity(res: Res, entity: Entity, q: Query) void {
         _ = entity;
+
         const ctrl = q.controller;
         const trans = q.transform;
-        const dt = ctx.dt;
+        const dt = res.time.dt;
 
         const forward = math.vec3Rotate(trans.rotation, .{ 0, 0, 1 });
         const right = math.vec3Rotate(trans.rotation, .{ 1, 0, 0 });
         const up = math.vec3Rotate(trans.rotation, .{ 0, 1, 0 });
 
-        const keyboard = ctx.getKeyboardState();
         var motion: math.Vec3 = .{ 0, 0, 0 };
 
-        if (keyboard[@intCast(sdl.SDL_SCANCODE_W)]) {
+        if (res.input.keyPressed(sdl.SDL_SCANCODE_W)) {
             motion = math.vec3Add(motion, forward);
         }
-        if (keyboard[@intCast(sdl.SDL_SCANCODE_A)]) {
+        if (res.input.keyPressed(sdl.SDL_SCANCODE_A)) {
             motion = math.vec3Sub(motion, right);
         }
-        if (keyboard[@intCast(sdl.SDL_SCANCODE_S)]) {
+        if (res.input.keyPressed(sdl.SDL_SCANCODE_S)) {
             motion = math.vec3Sub(motion, forward);
         }
-        if (keyboard[@intCast(sdl.SDL_SCANCODE_D)]) {
+        if (res.input.keyPressed(sdl.SDL_SCANCODE_D)) {
             motion = math.vec3Add(motion, right);
         }
-        if (keyboard[@intCast(sdl.SDL_SCANCODE_SPACE)]) {
+        if (res.input.keyPressed(sdl.SDL_SCANCODE_SPACE)) {
             motion = math.vec3Add(motion, up);
         }
 

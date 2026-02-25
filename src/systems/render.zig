@@ -1,34 +1,58 @@
 const std = @import("std");
 const sdl = @import("../sdl.zig").c;
 const math = @import("../math.zig");
-const SystemContext = @import("../system/context.zig").SystemContext;
 const SystemStage = @import("../system/context.zig").SystemStage;
-const Renderer = @import("../system/context.zig").Renderer;
+const ActiveCamera = @import("../system/context.zig").ActiveCamera;
 const Entity = @import("../pool.zig").Entity;
 const Transform = @import("../components/transform.zig").Transform;
 const CameraComponent = @import("../components/camera.zig").CameraComponent;
 const MeshComponent = @import("../components/mesh.zig").MeshComponent;
 const MaterialComponent = @import("../components/material.zig").MaterialComponent;
-const AmbientLightComponent = @import("../components/ambientlight.zig").AmbientLightComponent;
-const PointLightComponent = @import("../components/pointlight.zig").PointLightComponent;
-const PointLight = @import("../components/pointlight.zig").PointLight;
 
 pub const RenderSystem = struct {
     pub const stage = SystemStage.render;
 
-    pub fn run(ctx: *SystemContext, world: anytype) void {
-        const renderer = ctx.renderer;
-        const cam_entity = ctx.active_camera orelse return;
+    pub const Res = struct {
+        device: *sdl.SDL_GPUDevice,
+        window: *sdl.SDL_Window,
+        active_camera: *const ActiveCamera,
+    };
+
+    var depth_texture: ?*sdl.SDL_GPUTexture = null;
+    var point_ssbo: ?*sdl.SDL_GPUBuffer = null;
+    var ambient_ssbo: ?*sdl.SDL_GPUBuffer = null;
+    var point_size: u32 = 0;
+    var ambient_size: u32 = 0;
+    var cached_width: u32 = 0;
+    var cached_height: u32 = 0;
+
+    pub fn deinit(device: *sdl.SDL_GPUDevice) void {
+        if (depth_texture) |tex| {
+            sdl.SDL_ReleaseGPUTexture(device, tex);
+            depth_texture = null;
+        }
+        if (point_ssbo) |buf| {
+            sdl.SDL_ReleaseGPUBuffer(device, buf);
+            point_ssbo = null;
+        }
+        if (ambient_ssbo) |buf| {
+            sdl.SDL_ReleaseGPUBuffer(device, buf);
+            ambient_ssbo = null;
+        }
+    }
+
+    pub fn run(res: Res, world: anytype) void {
+        const cam_entity = res.active_camera.entity orelse return;
 
         const cam_trans = world.get("transform", cam_entity) orelse return;
         const cam_comp = world.get("camera", cam_entity) orelse return;
 
-        const cmd = sdl.SDL_AcquireGPUCommandBuffer(renderer.device);
+        const cmd = sdl.SDL_AcquireGPUCommandBuffer(res.device);
         var swapchain: ?*sdl.SDL_GPUTexture = null;
         var width: c_int = 0;
         var height: c_int = 0;
 
-        if (!sdl.SDL_WaitAndAcquireGPUSwapchainTexture(cmd, renderer.window, &swapchain, &width, &height)) {
+        if (!sdl.SDL_WaitAndAcquireGPUSwapchainTexture(cmd, res.window, &swapchain, &width, &height)) {
             sdl.SDL_SubmitGPUCommandBuffer(cmd);
             return;
         }
@@ -38,8 +62,15 @@ pub const RenderSystem = struct {
             return;
         }
 
-        renderer.width = @intCast(width);
-        renderer.height = @intCast(height);
+        const w: u32 = @intCast(width);
+        const h: u32 = @intCast(height);
+
+        ensureDepthTexture(res.device, w, h);
+        ensureSSBOs(res.device);
+        if (depth_texture == null) {
+            sdl.SDL_SubmitGPUCommandBuffer(cmd);
+            return;
+        }
 
         var color_target = sdl.SDL_GPUColorTargetInfo{
             .texture = swapchain.?,
@@ -49,7 +80,7 @@ pub const RenderSystem = struct {
         };
 
         var depth_target = sdl.SDL_GPUDepthStencilTargetInfo{
-            .texture = renderer.depth_texture.?,
+            .texture = depth_texture.?,
             .load_op = sdl.SDL_GPU_LOADOP_CLEAR,
             .store_op = sdl.SDL_GPU_STOREOP_STORE,
             .cycle = false,
@@ -154,7 +185,7 @@ pub const RenderSystem = struct {
             };
             sdl.SDL_BindGPUFragmentSamplers(pass, 0, &tex_bind, 1);
 
-            const buffers = [_]?*sdl.SDL_GPUBuffer{ renderer.ambient_ssbo, renderer.point_ssbo };
+            const buffers = [_]?*sdl.SDL_GPUBuffer{ ambient_ssbo, point_ssbo };
             sdl.SDL_BindGPUFragmentStorageBuffers(pass, 0, &buffers, 2);
 
             if (mesh.index_buffer) |ib| {
@@ -171,13 +202,54 @@ pub const RenderSystem = struct {
 
         sdl.SDL_SubmitGPUCommandBuffer(cmd);
     }
-};
 
-fn countComponents(world: anytype, comptime name: []const u8) u32 {
-    var iter = world.iter(name);
-    var count: u32 = 0;
-    while (iter.next()) |_| {
-        count += 1;
+    fn ensureDepthTexture(device: *sdl.SDL_GPUDevice, width: u32, height: u32) void {
+        if (depth_texture != null and cached_width == width and cached_height == height) {
+            return;
+        }
+
+        if (depth_texture) |tex| {
+            sdl.SDL_ReleaseGPUTexture(device, tex);
+        }
+
+        const depth_info = sdl.SDL_GPUTextureCreateInfo{
+            .type = sdl.SDL_GPU_TEXTURETYPE_2D,
+            .format = sdl.SDL_GPU_TEXTUREFORMAT_D24_UNORM,
+            .width = width,
+            .height = height,
+            .layer_count_or_depth = 1,
+            .num_levels = 1,
+            .usage = sdl.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
+        };
+        depth_texture = sdl.SDL_CreateGPUTexture(device, &depth_info);
+        cached_width = width;
+        cached_height = height;
     }
-    return count;
-}
+
+    fn ensureSSBOs(device: *sdl.SDL_GPUDevice) void {
+        if (point_ssbo != null and ambient_ssbo != null) return;
+
+        const ssbo_info = sdl.SDL_GPUBufferCreateInfo{
+            .size = 1024,
+            .usage = sdl.SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ,
+        };
+
+        if (point_ssbo == null) {
+            point_ssbo = sdl.SDL_CreateGPUBuffer(device, &ssbo_info);
+            point_size = 1024;
+        }
+        if (ambient_ssbo == null) {
+            ambient_ssbo = sdl.SDL_CreateGPUBuffer(device, &ssbo_info);
+            ambient_size = 1024;
+        }
+    }
+
+    fn countComponents(world: anytype, comptime name: []const u8) u32 {
+        var iter = world.iter(name);
+        var count: u32 = 0;
+        while (iter.next()) |_| {
+            count += 1;
+        }
+        return count;
+    }
+};

@@ -18,6 +18,24 @@ pub const components = struct {
     pub const PointLight = @import("components/pointlight.zig").PointLight;
 };
 
+pub const resource = struct {
+    pub const Resources = @import("resource.zig").Resources;
+};
+
+pub const system = struct {
+    pub const SystemStage = @import("system/context.zig").SystemStage;
+    pub const Time = @import("system/context.zig").Time;
+    pub const Input = @import("system/context.zig").Input;
+    pub const ActiveCamera = @import("system/context.zig").ActiveCamera;
+    pub const Scheduler = @import("system/scheduler.zig").Scheduler;
+};
+
+pub const systems = struct {
+    pub const FPSCameraEventSystem = @import("systems/fpscontroller.zig").FPSCameraEventSystem;
+    pub const FPSCameraUpdateSystem = @import("systems/fpscontroller.zig").FPSCameraUpdateSystem;
+    pub const RenderSystem = @import("systems/render.zig").RenderSystem;
+};
+
 pub const math = struct {
     pub const Vec2 = @import("math.zig").Vec2;
     pub const Vec3 = @import("math.zig").Vec3;
@@ -62,19 +80,6 @@ pub const math = struct {
     pub const mat4Scale = @import("math.zig").mat4Scale;
     pub const mat4Multiply = @import("math.zig").mat4Multiply;
     pub const mat4Perspective = @import("math.zig").mat4Perspective;
-};
-
-pub const system = struct {
-    pub const SystemContext = @import("system/context.zig").SystemContext;
-    pub const SystemStage = @import("system/context.zig").SystemStage;
-    pub const Renderer = @import("system/context.zig").Renderer;
-    pub const Scheduler = @import("system/scheduler.zig").Scheduler;
-};
-
-pub const systems = struct {
-    pub const FPSCameraEventSystem = @import("systems/fpscontroller.zig").FPSCameraEventSystem;
-    pub const FPSCameraUpdateSystem = @import("systems/fpscontroller.zig").FPSCameraUpdateSystem;
-    pub const RenderSystem = @import("systems/render.zig").RenderSystem;
 };
 
 pub const geometry = struct {
