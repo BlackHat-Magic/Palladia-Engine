@@ -8,6 +8,8 @@ const Transform = @import("../components/transform.zig").Transform;
 const CameraComponent = @import("../components/camera.zig").CameraComponent;
 const MeshComponent = @import("../components/mesh.zig").MeshComponent;
 const MaterialComponent = @import("../components/material.zig").MaterialComponent;
+const pointlight = @import("../components/pointlight.zig");
+const ambientlight = @import("../components/ambientlight.zig");
 
 pub const RenderSystem = struct {
     pub const stage = SystemStage.render;
@@ -25,6 +27,8 @@ pub const RenderSystem = struct {
     var ambient_size: u32 = 0;
     var cached_width: u32 = 0;
     var cached_height: u32 = 0;
+    var point_dirty: bool = true;
+    var ambient_dirty: bool = true;
 
     pub fn deinit(device: *sdl.SDL_GPUDevice) void {
         if (depth_texture) |tex| {
@@ -41,7 +45,54 @@ pub const RenderSystem = struct {
         }
     }
 
+    pub fn getPointLightContext() pointlight.Context {
+        return .{
+            .device = undefined,
+            .ssbo = &point_ssbo,
+            .ssbo_size = &point_size,
+            .dirty = &point_dirty,
+        };
+    }
+
+    pub fn getAmbientLightContext() ambientlight.Context {
+        return .{
+            .device = undefined,
+            .ssbo = &ambient_ssbo,
+            .ssbo_size = &ambient_size,
+            .dirty = &ambient_dirty,
+        };
+    }
+
+    pub fn getPointLightContextWithDevice(device: *sdl.SDL_GPUDevice) pointlight.Context {
+        return .{
+            .device = device,
+            .ssbo = &point_ssbo,
+            .ssbo_size = &point_size,
+            .dirty = &point_dirty,
+        };
+    }
+
+    pub fn getAmbientLightContextWithDevice(device: *sdl.SDL_GPUDevice) ambientlight.Context {
+        return .{
+            .device = device,
+            .ssbo = &ambient_ssbo,
+            .ssbo_size = &ambient_size,
+            .dirty = &ambient_dirty,
+        };
+    }
+
     pub fn run(res: Res, world: anytype) void {
+        ensureDepthTexture(res.device, 1, 1);
+
+        if (point_dirty) {
+            var ctx = getPointLightContextWithDevice(res.device);
+            pointlight.PointLightComponent.rebuildSSBO(world, &ctx);
+        }
+        if (ambient_dirty) {
+            var ctx = getAmbientLightContextWithDevice(res.device);
+            ambientlight.AmbientLightComponent.rebuildSSBO(world, &ctx);
+        }
+
         const cam_entity = res.active_camera.entity orelse return;
 
         const cam_trans = world.get("transform", cam_entity) orelse return;

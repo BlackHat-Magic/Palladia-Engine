@@ -13,9 +13,11 @@ pub const components = struct {
     pub const MaterialComponent = @import("components/material.zig").MaterialComponent;
     pub const FPSCameraController = @import("components/fpscameracontroller.zig").FPSCameraController;
     pub const AmbientLightComponent = @import("components/ambientlight.zig").AmbientLightComponent;
+    pub const AmbientLightContext = @import("components/ambientlight.zig").Context;
     pub const GPUAmbientLight = @import("components/ambientlight.zig").GPUAmbientLight;
     pub const PointLightComponent = @import("components/pointlight.zig").PointLightComponent;
-    pub const PointLight = @import("components/pointlight.zig").PointLight;
+    pub const PointLightContext = @import("components/pointlight.zig").Context;
+    pub const GPUPointLight = @import("components/pointlight.zig").GPUPointLight;
 };
 
 pub const resource = struct {
@@ -114,7 +116,9 @@ pub const CameraComponent = components.CameraComponent;
 pub const MaterialComponent = components.MaterialComponent;
 pub const FPSCameraController = components.FPSCameraController;
 pub const AmbientLightComponent = components.AmbientLightComponent;
+pub const AmbientLightContext = components.AmbientLightContext;
 pub const PointLightComponent = components.PointLightComponent;
+pub const PointLightContext = components.PointLightContext;
 
 test {
     std.testing.refAllDeclsRecursive(@This());

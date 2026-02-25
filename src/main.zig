@@ -17,8 +17,8 @@ test "ECS basic usage" {
     defer world.deinit();
 
     const entity = world.createEntity();
-    try world.add("transform", entity, .{ .position = .{ 1, 2, 3 } });
-    try world.add("health", entity, .{ .current = 100, .max = 100 });
+    try world.add("transform", entity, .{ .position = .{ 1, 2, 3 } }, null);
+    try world.add("health", entity, .{ .current = 100, .max = 100 }, null);
 
     try std.testing.expect(world.has("transform", entity));
     try std.testing.expect(world.has("health", entity));
@@ -31,7 +31,7 @@ test "ECS basic usage" {
         try std.testing.expectEqual(@as(f32, 90), h.current);
     }
 
-    try world.remove("health", entity);
+    try world.remove("health", entity, null);
     try std.testing.expect(!world.has("health", entity));
 }
 
@@ -109,8 +109,8 @@ test "System with resources" {
     defer world.deinit();
 
     const entity = world.createEntity();
-    try world.add("position", entity, .{ 0, 0, 0 });
-    try world.add("velocity", entity, .{ 1, 2, 3 });
+    try world.add("position", entity, .{ 0, 0, 0 }, null);
+    try world.add("velocity", entity, .{ 1, 2, 3 }, null);
 
     var time = palladia.system.Time{ .dt = 0.5, .total = 0, .frame = 0 };
     const ResourcesStore = palladia.resource.Resources(MyResources);
@@ -123,4 +123,52 @@ test "System with resources" {
     try std.testing.expectApproxEqAbs(@as(f32, 0.5), pos[0], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 1.0), pos[1], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 1.5), pos[2], 0.001);
+}
+
+test "Component hooks" {
+    var add_count: u32 = 0;
+    var remove_count: u32 = 0;
+
+    const TrackedValue = struct {
+        value: u32,
+
+        pub fn onAdd(entity: palladia.ecs.Entity, component: *const @This(), world: *anyopaque, ctx: ?*anyopaque) void {
+            _ = component;
+            _ = world;
+            _ = entity;
+            if (ctx) |c| {
+                const counter: *u32 = @ptrCast(@alignCast(c));
+                counter.* += 1;
+            }
+        }
+
+        pub fn onRemove(entity: palladia.ecs.Entity, world: *anyopaque, ctx: ?*anyopaque) void {
+            _ = world;
+            _ = entity;
+            if (ctx) |c| {
+                const counter: *u32 = @ptrCast(@alignCast(c));
+                counter.* += 1;
+            }
+        }
+    };
+
+    const MyComponents = struct {
+        value: TrackedValue,
+    };
+
+    const MyWorld = palladia.World(MyComponents);
+
+    var world = MyWorld.init(std.testing.allocator);
+    defer world.deinit();
+
+    const e1 = world.createEntity();
+    try world.add("value", e1, .{ .value = 42 }, &add_count);
+
+    const e2 = world.createEntity();
+    try world.add("value", e2, .{ .value = 100 }, &add_count);
+
+    try std.testing.expectEqual(@as(u32, 2), add_count);
+
+    try world.remove("value", e1, &remove_count);
+    try std.testing.expectEqual(@as(u32, 1), remove_count);
 }

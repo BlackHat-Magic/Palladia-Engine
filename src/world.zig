@@ -2,6 +2,11 @@ const std = @import("std");
 const Pool = @import("pool.zig").Pool;
 const Entity = @import("pool.zig").Entity;
 
+fn canHaveDecls(comptime T: type) bool {
+    const info = @typeInfo(T);
+    return info == .@"struct";
+}
+
 pub fn World(comptime Components: type) type {
     const component_fields = @typeInfo(Components).@"struct".fields;
 
@@ -61,10 +66,19 @@ pub fn World(comptime Components: type) type {
             return self.next_entity;
         }
 
-        pub fn destroyEntity(self: *Self, entity: Entity) void {
+        pub fn destroyEntity(self: *Self, entity: Entity, ctx: ?*anyopaque) void {
             inline for (component_fields) |field| {
-                const pool_name = field.name ++ "_pool";
-                @field(self.pools, pool_name).remove(entity) catch {};
+                const comp_name = field.name;
+                const CompType = field.type;
+                if (self.has(comp_name, entity)) {
+                    if (comptime canHaveDecls(CompType)) {
+                        if (@hasDecl(CompType, "onRemove")) {
+                            CompType.onRemove(entity, self, ctx);
+                        }
+                    }
+                    const pool_name = comp_name ++ "_pool";
+                    @field(self.pools, pool_name).remove(entity) catch {};
+                }
             }
         }
 
@@ -73,9 +87,17 @@ pub fn World(comptime Components: type) type {
             comptime component_name: []const u8,
             entity: Entity,
             component: @FieldType(Components, component_name),
+            ctx: ?*anyopaque,
         ) !void {
             const pool_name = component_name ++ "_pool";
             try @field(self.pools, pool_name).add(entity, component);
+
+            const CompType = @FieldType(Components, component_name);
+            if (comptime canHaveDecls(CompType)) {
+                if (@hasDecl(CompType, "onAdd")) {
+                    CompType.onAdd(entity, &component, self, ctx);
+                }
+            }
         }
 
         pub fn get(
@@ -109,7 +131,15 @@ pub fn World(comptime Components: type) type {
             self: *Self,
             comptime component_name: []const u8,
             entity: Entity,
+            ctx: ?*anyopaque,
         ) !void {
+            const CompType = @FieldType(Components, component_name);
+            if (comptime canHaveDecls(CompType)) {
+                if (@hasDecl(CompType, "onRemove")) {
+                    CompType.onRemove(entity, self, ctx);
+                }
+            }
+
             const pool_name = component_name ++ "_pool";
             try @field(self.pools, pool_name).remove(entity);
         }
@@ -122,11 +152,4 @@ pub fn World(comptime Components: type) type {
             return @field(self.pools, pool_name).iter();
         }
     };
-}
-
-fn validateComponentName(comptime name: []const u8, comptime Components: type) void {
-    inline for (@typeInfo(Components).@"struct".fields) |field| {
-        if (std.mem.eql(u8, field.name, name)) return;
-    }
-    @compileError("Component '" ++ name ++ "' not found in Components struct");
 }
