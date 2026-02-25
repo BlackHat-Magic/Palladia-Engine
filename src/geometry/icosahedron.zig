@@ -46,26 +46,26 @@ pub fn createIcosahedron(
     for (0..12) |i| {
         const pos = normalize(raw_positions[i]);
         const scaled_pos: Vec3 = .{ pos[0] * args.radius, pos[1] * args.radius, pos[2] * args.radius };
-        const norm_pos = normalize(scaled_pos);
 
-        const u = 0.5 + std.math.atan2(norm_pos[2], norm_pos[0]) / (2.0 * std.math.pi);
-        const v = std.math.acos(norm_pos[1]) / std.math.pi;
+        const u = 0.5 + std.math.atan2(scaled_pos[2], scaled_pos[0]) / (2.0 * std.math.pi);
+        const v = std.math.acos(scaled_pos[1]) / std.math.pi;
 
         vertices[i] = .{
             .pos = scaled_pos,
-            .normal = norm_pos,
+            .normal = .{ 0, 0, 0 },
             .uv = .{ u, v },
         };
     }
 
     const indices = [_]u32{
-        0,  5, 1,  0,  1,  7, 0,  7, 10, 0,  10, 5,
-        1,  9, 5,  5,  11, 4, 11, 4, 5,  10, 2,  11,
-        10, 7, 10, 6,  7,  1, 8,  7, 9,  4,  3,  4,
-        2,  3, 2,  6,  3,  6, 8,  3, 8,  9,  3,  9,
-        5,  4, 4,  11, 2,  2, 10, 8, 6,  7,  8,  1,
-        9,
+        0,  5,  1,  0, 1, 7,  0, 7,  10, 0,  10, 11,
+        0,  11, 5,  1, 5, 9,  5, 11, 4,  11, 10, 2,
+        10, 7,  6,  7, 1, 8,  3, 9,  4,  3,  4,  2,
+        3,  2,  6,  3, 6, 8,  3, 8,  9,  4,  9,  5,
+        2,  4,  11, 6, 2, 10, 8, 6,  7,  9,  8,  1,
     };
+
+    common.computeNormals(&vertices, &indices);
 
     const vbo = try uploadVertices(device, &vertices);
     errdefer sdl.SDL_ReleaseGPUBuffer(device, vbo);

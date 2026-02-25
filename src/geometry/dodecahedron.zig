@@ -35,19 +35,21 @@ pub fn createDodecahedron(
     for (0..20) |i| {
         const raw_pos: Vec3 = .{ raw_vertices_flat[i * 3], raw_vertices_flat[i * 3 + 1], raw_vertices_flat[i * 3 + 2] };
         const scaled_pos: Vec3 = .{ raw_pos[0] * args.radius, raw_pos[1] * args.radius, raw_pos[2] * args.radius };
-        const norm_pos = normalize(scaled_pos);
 
+        const norm_pos = normalize(scaled_pos);
         const u = 0.5 + std.math.atan2(norm_pos[2], norm_pos[0]) / (2.0 * std.math.pi);
         const v = std.math.acos(norm_pos[1]) / std.math.pi;
 
         vertices[i] = .{
             .pos = scaled_pos,
-            .normal = norm_pos,
+            .normal = .{ 0, 0, 0 },
             .uv = .{ u, v },
         };
     }
 
     const indices = [_]u32{ 1, 8, 0, 0, 12, 13, 13, 1, 0, 4, 9, 5, 5, 15, 14, 14, 4, 5, 2, 10, 3, 3, 13, 12, 12, 2, 3, 7, 11, 6, 6, 14, 15, 15, 7, 6, 2, 12, 0, 0, 16, 17, 17, 2, 0, 1, 13, 3, 3, 19, 18, 18, 1, 3, 4, 14, 6, 6, 17, 16, 16, 4, 6, 7, 15, 5, 5, 18, 19, 19, 7, 5, 4, 16, 0, 0, 8, 9, 9, 4, 0, 2, 17, 6, 6, 11, 10, 10, 2, 6, 1, 18, 5, 5, 9, 8, 8, 1, 5, 7, 19, 3, 3, 10, 11, 11, 7, 3 };
+
+    common.computeNormals(&vertices, &indices);
 
     const vbo = try uploadVertices(device, &vertices);
     errdefer sdl.SDL_ReleaseGPUBuffer(device, vbo);

@@ -60,10 +60,10 @@ pub fn createRing(
     var index_idx: usize = 0;
     for (0..args.theta_segments) |i| {
         for (0..args.phi_segments) |j| {
-            const a = i * num_phi + j;
-            const b = i * num_phi + j + 1;
-            const c = (i + 1) * num_phi + j + 1;
-            const d = (i + 1) * num_phi + j;
+            const a: u32 = @intCast(i * num_phi + j);
+            const b: u32 = @intCast(i * num_phi + j + 1);
+            const c: u32 = @intCast((i + 1) * num_phi + j + 1);
+            const d: u32 = @intCast((i + 1) * num_phi + j);
 
             indices[index_idx] = a;
             indices[index_idx + 1] = b;

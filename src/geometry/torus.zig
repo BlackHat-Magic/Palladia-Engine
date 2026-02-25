@@ -80,18 +80,19 @@ pub fn createTorus(
 
     var index_idx: usize = 0;
     for (0..args.tubular_segments) |tu| {
-        var tu1: u32 = tu + 1;
+        var tu1: u32 = @intCast(tu + 1);
         if (is_closed) {
             tu1 %= args.tubular_segments;
         }
 
         for (0..args.radial_segments) |ra| {
-            const ra1 = (ra + 1) % args.radial_segments;
+            const ra_u32: u32 = @intCast(ra);
+            const ra1: u32 = (ra_u32 + 1) % args.radial_segments;
 
-            const a = tu * num_radial + ra;
-            const b = tu1 * num_radial + ra;
-            const c = tu1 * num_radial + ra1;
-            const d = tu * num_radial + ra1;
+            const a: u32 = @intCast(tu * num_radial + ra_u32);
+            const b: u32 = tu1 * num_radial + ra_u32;
+            const c: u32 = tu1 * num_radial + ra1;
+            const d: u32 = @intCast(tu * num_radial + ra1);
 
             indices[index_idx] = a;
             indices[index_idx + 1] = d;

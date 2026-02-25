@@ -38,14 +38,13 @@ pub fn createTetrahedron(
     for (0..4) |i| {
         const pos = normalize(raw_vertices[i]);
         const scaled_pos: Vec3 = .{ pos[0] * args.radius, pos[1] * args.radius, pos[2] * args.radius };
-        const norm_pos = normalize(scaled_pos);
 
-        const u = 0.5 + std.math.atan2(norm_pos[2], norm_pos[0]) / (2.0 * std.math.pi);
-        const v = std.math.acos(norm_pos[1]) / std.math.pi;
+        const u = 0.5 + std.math.atan2(pos[2], pos[0]) / (2.0 * std.math.pi);
+        const v = std.math.acos(pos[1]) / std.math.pi;
 
         vertices[i] = .{
             .pos = scaled_pos,
-            .normal = norm_pos,
+            .normal = .{ 0, 0, 0 },
             .uv = .{ u, v },
         };
     }
@@ -57,6 +56,8 @@ pub fn createTetrahedron(
         0, 2, 3,
         1, 3, 2,
     };
+
+    computeNormals(&vertices, &indices);
 
     const vbo = try uploadVertices(device, &vertices);
     errdefer sdl.SDL_ReleaseGPUBuffer(device, vbo);

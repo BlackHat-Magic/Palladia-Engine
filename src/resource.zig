@@ -7,10 +7,10 @@ pub fn Resources(comptime ResourceDefs: type) type {
     inline for (fields, 0..) |field, i| {
         storage_fields[i] = .{
             .name = field.name,
-            .type = ?*field.type,
-            .default_value_ptr = @ptrCast(&@as(?*field.type, null)),
+            .type = ?field.type,
+            .default_value_ptr = @ptrCast(&@as(?field.type, null)),
             .is_comptime = false,
-            .alignment = @alignOf(?*field.type),
+            .alignment = @alignOf(?field.type),
         };
     }
 
@@ -32,15 +32,11 @@ pub fn Resources(comptime ResourceDefs: type) type {
             return .{ .storage = std.mem.zeroInit(Storage, .{}) };
         }
 
-        pub fn set(self: *Self, comptime name: []const u8, ptr: *@FieldType(ResourceDefs, name)) void {
-            @field(self.storage, name) = ptr;
+        pub fn set(self: *Self, comptime name: []const u8, value: @FieldType(ResourceDefs, name)) void {
+            @field(self.storage, name) = value;
         }
 
-        pub fn get(self: *const Self, comptime name: []const u8) ?*@FieldType(ResourceDefs, name) {
-            return @field(self.storage, name);
-        }
-
-        pub fn getConst(self: *const Self, comptime name: []const u8) ?*const @FieldType(ResourceDefs, name) {
+        pub fn get(self: *const Self, comptime name: []const u8) ?@FieldType(ResourceDefs, name) {
             return @field(self.storage, name);
         }
 
@@ -67,23 +63,19 @@ pub fn buildResourceStruct(
             if (@typeInfo(field.type) != .pointer) {
                 @compileError("Resource field '" ++ name ++ "' must be a pointer type (*T or *const T)");
             }
-            const ChildType = @typeInfo(field.type).pointer.child;
-            if (ChildType != ResType) {
-                @compileError("Resource '" ++ name ++ "' type mismatch: expected " ++ @typeName(ChildType) ++ ", found " ++ @typeName(ResType));
+            const field_child = @typeInfo(field.type).pointer.child;
+            const res_child = if (@typeInfo(ResType) == .pointer) @typeInfo(ResType).pointer.child else ResType;
+            if (field_child != res_child) {
+                @compileError("Resource '" ++ name ++ "' type mismatch: expected " ++ @typeName(res_child) ++ ", found " ++ @typeName(field_child));
             }
         }
 
-        const ptr = resources.get(name);
-        if (ptr == null) {
+        const value = resources.get(name);
+        if (value == null) {
             std.debug.panic("Resource '{s}' not set", .{name});
         }
 
-        const is_const = @typeInfo(field.type).pointer.is_const;
-        if (is_const) {
-            @field(result, name) = @ptrCast(ptr);
-        } else {
-            @field(result, name) = ptr;
-        }
+        @field(result, name) = value.?;
     }
 
     return result;

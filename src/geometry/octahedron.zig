@@ -39,14 +39,13 @@ pub fn createOctahedron(
     for (0..6) |i| {
         const pos = normalize(raw_positions[i]);
         const scaled_pos: Vec3 = .{ pos[0] * args.radius, pos[1] * args.radius, pos[2] * args.radius };
-        const norm_pos = normalize(scaled_pos);
 
-        const u = 0.5 + std.math.atan2(norm_pos[2], norm_pos[0]) / (2.0 * std.math.pi);
-        const v = std.math.acos(norm_pos[1]) / std.math.pi;
+        const u = 0.5 + std.math.atan2(scaled_pos[2], scaled_pos[0]) / (2.0 * std.math.pi);
+        const v = std.math.acos(scaled_pos[1]) / std.math.pi;
 
         vertices[i] = .{
             .pos = scaled_pos,
-            .normal = norm_pos,
+            .normal = .{ 0, 0, 0 },
             .uv = .{ u, v },
         };
     }
@@ -56,11 +55,13 @@ pub fn createOctahedron(
         0, 3, 2,
         0, 4, 3,
         0, 1, 4,
-        5, 2, 4,
-        5, 4, 1,
         5, 1, 2,
+        5, 2, 3,
         5, 3, 4,
+        5, 4, 1,
     };
+
+    common.computeNormals(&vertices, &indices);
 
     const vbo = try uploadVertices(device, &vertices);
     errdefer sdl.SDL_ReleaseGPUBuffer(device, vbo);

@@ -40,8 +40,8 @@ pub const PointLightComponent = struct {
     }
 
     pub fn rebuildSSBO(world: anytype, ctx: *Context) void {
-        var lights = std.ArrayList(GPUPointLight).init(std.heap.page_allocator);
-        defer lights.deinit();
+        var lights = std.ArrayList(GPUPointLight).initCapacity(std.heap.page_allocator, 16) catch return;
+        defer lights.deinit(std.heap.page_allocator);
 
         var iter = world.iter("point_light");
         while (iter.next()) |entry| {
@@ -50,14 +50,14 @@ pub const PointLightComponent = struct {
 
             var gpu_light: GPUPointLight = .{
                 .position = .{ 0, 0, 0, 0 },
-                .color = light.*,
+                .color = light.color,
             };
 
             if (world.getConst("transform", entity)) |trans| {
                 gpu_light.position = .{ trans.position[0], trans.position[1], trans.position[2], 0 };
             }
 
-            lights.append(gpu_light) catch return;
+            lights.append(std.heap.page_allocator, gpu_light) catch return;
         }
 
         const needed_size: u32 = if (lights.items.len > 0)
@@ -72,8 +72,9 @@ pub const PointLightComponent = struct {
             }
 
             const ssbo_info = sdl.SDL_GPUBufferCreateInfo{
-                .size = final_size,
                 .usage = sdl.SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ,
+                .size = final_size,
+                .props = 0,
             };
             ctx.ssbo.* = sdl.SDL_CreateGPUBuffer(ctx.device, &ssbo_info);
             ctx.ssbo_size.* = final_size;
@@ -85,8 +86,9 @@ pub const PointLightComponent = struct {
         }
 
         const tbuf_info = sdl.SDL_GPUTransferBufferCreateInfo{
-            .size = @intCast(lights.items.len * @sizeOf(GPUPointLight)),
             .usage = sdl.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+            .size = @intCast(lights.items.len * @sizeOf(GPUPointLight)),
+            .props = 0,
         };
         const tbuf = sdl.SDL_CreateGPUTransferBuffer(ctx.device, &tbuf_info) orelse return;
         defer sdl.SDL_ReleaseGPUTransferBuffer(ctx.device, tbuf);
@@ -109,7 +111,7 @@ pub const PointLightComponent = struct {
         };
         sdl.SDL_UploadToGPUBuffer(copy_pass, &src_loc, &dst_region, false);
         sdl.SDL_EndGPUCopyPass(copy_pass);
-        sdl.SDL_SubmitGPUCommandBuffer(cmd);
+        _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
 
         ctx.dirty.* = false;
     }

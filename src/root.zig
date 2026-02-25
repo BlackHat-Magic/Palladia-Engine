@@ -1,5 +1,7 @@
 const std = @import("std");
 
+pub const sdl = @import("sdl.zig").c;
+
 pub const ecs = struct {
     pub const Entity = @import("pool.zig").Entity;
     pub const Pool = @import("pool.zig").Pool;

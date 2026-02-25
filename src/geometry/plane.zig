@@ -53,10 +53,10 @@ pub fn createPlane(
     var index_idx: usize = 0;
     for (0..height_segments) |iy| {
         for (0..width_segments) |ix| {
-            const a = iy * (width_segments + 1) + ix;
-            const b = iy * (width_segments + 1) + ix + 1;
-            const c = (iy + 1) * (width_segments + 1) + ix + 1;
-            const d = (iy + 1) * (width_segments + 1) + ix;
+            const a: u32 = @intCast(iy * (width_segments + 1) + ix);
+            const b: u32 = @intCast(iy * (width_segments + 1) + ix + 1);
+            const c: u32 = @intCast((iy + 1) * (width_segments + 1) + ix + 1);
+            const d: u32 = @intCast((iy + 1) * (width_segments + 1) + ix);
 
             indices[index_idx] = a;
             indices[index_idx + 1] = b;

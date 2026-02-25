@@ -11,7 +11,7 @@ const Vertex = common.Vertex;
 
 pub fn createLathe(
     device: *sdl.SDL_GPUDevice,
-    comptime args: struct {
+    args: struct {
         path: []const Vec2,
         segments: u32,
         phi_start: f32 = 0.0,

@@ -8,7 +8,7 @@ pub const Vertex = extern struct {
 };
 
 pub fn uploadVertices(device: *sdl.SDL_GPUDevice, vertices: []const Vertex) !*sdl.SDL_GPUBuffer {
-    const buffer_size = @sizeOf(Vertex) * vertices.len;
+    const buffer_size: u32 = @intCast(@sizeOf(Vertex) * vertices.len);
 
     const transfer_info = sdl.SDL_GPUTransferBufferCreateInfo{
         .size = buffer_size,
@@ -23,7 +23,8 @@ pub fn uploadVertices(device: *sdl.SDL_GPUDevice, vertices: []const Vertex) !*sd
         return error.MapFailed;
     };
 
-    @memcpy(@as([*]u8, @ptrCast(data))[0..buffer_size], std.mem.asBytes(vertices));
+    const vertices_bytes: []const u8 = std.mem.sliceAsBytes(vertices);
+    @memcpy(@as([*]u8, @ptrCast(data))[0..buffer_size], vertices_bytes);
     sdl.SDL_UnmapGPUTransferBuffer(device, transfer_buf);
 
     const buffer_info = sdl.SDL_GPUBufferCreateInfo{
@@ -39,7 +40,7 @@ pub fn uploadVertices(device: *sdl.SDL_GPUDevice, vertices: []const Vertex) !*sd
     };
 
     const copy_pass = sdl.SDL_BeginGPUCopyPass(cmd) orelse {
-        sdl.SDL_SubmitGPUCommandBuffer(cmd);
+        _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
         sdl.SDL_ReleaseGPUBuffer(device, buffer);
         return error.CopyPassFailed;
     };
@@ -54,13 +55,13 @@ pub fn uploadVertices(device: *sdl.SDL_GPUDevice, vertices: []const Vertex) !*sd
     }, false);
 
     sdl.SDL_EndGPUCopyPass(copy_pass);
-    sdl.SDL_SubmitGPUCommandBuffer(cmd);
+    _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
 
     return buffer;
 }
 
 pub fn uploadIndices(device: *sdl.SDL_GPUDevice, indices: []const u32) !*sdl.SDL_GPUBuffer {
-    const buffer_size = @sizeOf(u32) * indices.len;
+    const buffer_size: u32 = @intCast(@sizeOf(u32) * indices.len);
 
     const transfer_info = sdl.SDL_GPUTransferBufferCreateInfo{
         .size = buffer_size,
@@ -75,7 +76,8 @@ pub fn uploadIndices(device: *sdl.SDL_GPUDevice, indices: []const u32) !*sdl.SDL
         return error.MapFailed;
     };
 
-    @memcpy(@as([*]u8, @ptrCast(data))[0..buffer_size], std.mem.asBytes(indices));
+    const indices_bytes: []const u8 = std.mem.sliceAsBytes(indices);
+    @memcpy(@as([*]u8, @ptrCast(data))[0..buffer_size], indices_bytes);
     sdl.SDL_UnmapGPUTransferBuffer(device, transfer_buf);
 
     const buffer_info = sdl.SDL_GPUBufferCreateInfo{
@@ -91,7 +93,7 @@ pub fn uploadIndices(device: *sdl.SDL_GPUDevice, indices: []const u32) !*sdl.SDL
     };
 
     const copy_pass = sdl.SDL_BeginGPUCopyPass(cmd) orelse {
-        sdl.SDL_SubmitGPUCommandBuffer(cmd);
+        _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
         sdl.SDL_ReleaseGPUBuffer(device, buffer);
         return error.CopyPassFailed;
     };
@@ -106,7 +108,7 @@ pub fn uploadIndices(device: *sdl.SDL_GPUDevice, indices: []const u32) !*sdl.SDL
     }, false);
 
     sdl.SDL_EndGPUCopyPass(copy_pass);
-    sdl.SDL_SubmitGPUCommandBuffer(cmd);
+    _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
 
     return buffer;
 }

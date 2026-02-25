@@ -34,14 +34,14 @@ pub const AmbientLightComponent = struct {
     }
 
     pub fn rebuildSSBO(world: anytype, ctx: *Context) void {
-        var lights = std.ArrayList(GPUAmbientLight).init(std.heap.page_allocator);
-        defer lights.deinit();
+        var lights = std.ArrayList(GPUAmbientLight).initCapacity(std.heap.page_allocator, 16) catch return;
+        defer lights.deinit(std.heap.page_allocator);
 
         var iter = world.iter("ambient_light");
         while (iter.next()) |entry| {
             const entity = entry.entity;
             const light = world.getConst("ambient_light", entity) orelse continue;
-            lights.append(light.*) catch return;
+            lights.append(std.heap.page_allocator, light.color) catch return;
         }
 
         const needed_size: u32 = if (lights.items.len > 0)
@@ -56,8 +56,9 @@ pub const AmbientLightComponent = struct {
             }
 
             const ssbo_info = sdl.SDL_GPUBufferCreateInfo{
-                .size = final_size,
                 .usage = sdl.SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ,
+                .size = final_size,
+                .props = 0,
             };
             ctx.ssbo.* = sdl.SDL_CreateGPUBuffer(ctx.device, &ssbo_info);
             ctx.ssbo_size.* = final_size;
@@ -69,8 +70,9 @@ pub const AmbientLightComponent = struct {
         }
 
         const tbuf_info = sdl.SDL_GPUTransferBufferCreateInfo{
-            .size = @intCast(lights.items.len * @sizeOf(GPUAmbientLight)),
             .usage = sdl.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+            .size = @intCast(lights.items.len * @sizeOf(GPUAmbientLight)),
+            .props = 0,
         };
         const tbuf = sdl.SDL_CreateGPUTransferBuffer(ctx.device, &tbuf_info) orelse return;
         defer sdl.SDL_ReleaseGPUTransferBuffer(ctx.device, tbuf);
@@ -93,7 +95,7 @@ pub const AmbientLightComponent = struct {
         };
         sdl.SDL_UploadToGPUBuffer(copy_pass, &src_loc, &dst_region, false);
         sdl.SDL_EndGPUCopyPass(copy_pass);
-        sdl.SDL_SubmitGPUCommandBuffer(cmd);
+        _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
 
         ctx.dirty.* = false;
     }

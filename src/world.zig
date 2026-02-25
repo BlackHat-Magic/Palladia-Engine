@@ -123,6 +123,9 @@ pub fn World(comptime Components: type) type {
             comptime component_name: []const u8,
             entity: Entity,
         ) bool {
+            if (!@hasField(Components, component_name)) {
+                return false;
+            }
             const pool_name = component_name ++ "_pool";
             return @field(self.pools, pool_name).has(entity);
         }

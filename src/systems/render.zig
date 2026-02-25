@@ -82,13 +82,13 @@ pub const RenderSystem = struct {
     }
 
     pub fn run(res: Res, world: anytype) void {
-        ensureDepthTexture(res.device, 1, 1);
+        ensureSSBOs(res.device);
 
-        if (point_dirty) {
+        if (point_dirty and point_ssbo != null) {
             var ctx = getPointLightContextWithDevice(res.device);
             pointlight.PointLightComponent.rebuildSSBO(world, &ctx);
         }
-        if (ambient_dirty) {
+        if (ambient_dirty and ambient_ssbo != null) {
             var ctx = getAmbientLightContextWithDevice(res.device);
             ambientlight.AmbientLightComponent.rebuildSSBO(world, &ctx);
         }
@@ -100,26 +100,26 @@ pub const RenderSystem = struct {
 
         const cmd = sdl.SDL_AcquireGPUCommandBuffer(res.device);
         var swapchain: ?*sdl.SDL_GPUTexture = null;
-        var width: c_int = 0;
-        var height: c_int = 0;
+        var width: u32 = 0;
+        var height: u32 = 0;
 
         if (!sdl.SDL_WaitAndAcquireGPUSwapchainTexture(cmd, res.window, &swapchain, &width, &height)) {
-            sdl.SDL_SubmitGPUCommandBuffer(cmd);
+            _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
             return;
         }
 
         if (swapchain == null) {
-            sdl.SDL_SubmitGPUCommandBuffer(cmd);
+            _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
             return;
         }
 
-        const w: u32 = @intCast(width);
-        const h: u32 = @intCast(height);
+        const w: u32 = width;
+        const h: u32 = height;
 
         ensureDepthTexture(res.device, w, h);
         ensureSSBOs(res.device);
         if (depth_texture == null) {
-            sdl.SDL_SubmitGPUCommandBuffer(cmd);
+            _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
             return;
         }
 
@@ -198,8 +198,6 @@ pub const RenderSystem = struct {
             const mat = world.get("material", entity) orelse continue;
             const trans = world.get("transform", entity) orelse continue;
 
-            if (mat.pipeline == null) continue;
-
             var model: math.Mat4 = undefined;
             math.mat4Identity(&model);
             if (world.has("billboard", entity)) {
@@ -251,7 +249,7 @@ pub const RenderSystem = struct {
             }
         }
 
-        sdl.SDL_SubmitGPUCommandBuffer(cmd);
+        _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
     }
 
     fn ensureDepthTexture(device: *sdl.SDL_GPUDevice, width: u32, height: u32) void {
@@ -266,11 +264,13 @@ pub const RenderSystem = struct {
         const depth_info = sdl.SDL_GPUTextureCreateInfo{
             .type = sdl.SDL_GPU_TEXTURETYPE_2D,
             .format = sdl.SDL_GPU_TEXTUREFORMAT_D24_UNORM,
+            .usage = sdl.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
             .width = width,
             .height = height,
             .layer_count_or_depth = 1,
             .num_levels = 1,
-            .usage = sdl.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
+            .sample_count = sdl.SDL_GPU_SAMPLECOUNT_1,
+            .props = 0,
         };
         depth_texture = sdl.SDL_CreateGPUTexture(device, &depth_info);
         cached_width = width;
@@ -281,8 +281,9 @@ pub const RenderSystem = struct {
         if (point_ssbo != null and ambient_ssbo != null) return;
 
         const ssbo_info = sdl.SDL_GPUBufferCreateInfo{
-            .size = 1024,
             .usage = sdl.SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ,
+            .size = 1024,
+            .props = 0,
         };
 
         if (point_ssbo == null) {

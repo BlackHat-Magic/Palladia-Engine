@@ -98,6 +98,25 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_mod_tests.step);
     test_step.dependOn(&run_exe_tests.step);
+
+    const demo_mesh = b.addExecutable(.{
+        .name = "demo_mesh",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("examples/demo_mesh_zig/main.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "palladia", .module = mod },
+            },
+        }),
+    });
+
+    const install_demo = b.addInstallArtifact(demo_mesh, .{});
+    const demo_step = b.step("demo", "Build and run the demo_mesh example");
+    demo_step.dependOn(&install_demo.step);
+
+    const run_demo = b.addRunArtifact(demo_mesh);
+    demo_step.dependOn(&run_demo.step);
 }
 
 pub const ShaderSpec = struct {

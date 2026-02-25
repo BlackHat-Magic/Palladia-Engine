@@ -86,18 +86,18 @@ pub fn vec4Dot(a: Vec4, b: Vec4) f32 {
 }
 
 pub fn quatFromEuler(euler: Vec3) Vec4 {
+    const cx = @cos(euler[0] * 0.5);
+    const sx = @sin(euler[0] * 0.5);
     const cy = @cos(euler[1] * 0.5);
     const sy = @sin(euler[1] * 0.5);
-    const cp = @cos(euler[0] * 0.5);
-    const sp = @sin(euler[0] * 0.5);
-    const cr = @cos(euler[2] * 0.5);
-    const sr = @sin(euler[2] * 0.5);
+    const cz = @cos(euler[2] * 0.5);
+    const sz = @sin(euler[2] * 0.5);
 
     return .{
-        sr * cp * cy - cr * sp * sy,
-        cr * sp * cy + sr * cp * sy,
-        cr * cp * sy - sr * sp * cy,
-        cr * cp * cy + sr * sp * sy,
+        sx * cy * cz - cx * sy * sz,
+        cx * sy * cz + sx * cy * sz,
+        cx * cy * sz - sx * sy * cz,
+        cx * cy * cz + sx * sy * sz,
     };
 }
 
@@ -267,9 +267,10 @@ pub fn mat4Multiply(out: *Mat4, a: *const Mat4, b: *const Mat4) void {
 pub fn mat4Perspective(m: *Mat4, fov_rad: f32, aspect: f32, near: f32, far: f32) void {
     @memset(m, 0);
     const tan_half_fov = @tan(fov_rad * 0.5);
-    m[0] = 1 / (aspect * tan_half_fov);
-    m[5] = 1 / tan_half_fov;
-    m[10] = -(far + near) / (far - near);
-    m[11] = -1;
-    m[14] = -(2 * far * near) / (far - near);
+    const focal = 1.0 / tan_half_fov;
+    m[0] = focal / aspect;
+    m[5] = focal;
+    m[10] = far / (far - near);
+    m[14] = -(far * near) / (far - near);
+    m[11] = 1;
 }
