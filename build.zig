@@ -37,21 +37,27 @@ pub fn build(b: *std.Build) void {
         const glslang = b.findProgram(&.{"glslangValidator"}, &.{}) catch null;
 
         if (glslang) |glslang_path| {
+            const build_root = b.build_root.path orelse ".";
+
+            const mkdir = b.addSystemCommand(&.{ "mkdir", "-p", b.fmt("{s}/src/shaders/spirv", .{build_root}) });
+            shader_step.dependOn(&mkdir.step);
+
             inline for (shaders) |shader| {
-                const input = b.path(b.fmt("src/shaders/glsl/{s}", .{shader}));
-                const output_name = b.fmt("{s}.spv", .{shader});
+                const input_path = b.fmt("{s}/src/shaders/glsl/{s}", .{ build_root, shader });
+                const output_path = b.fmt("{s}/src/shaders/spirv/{s}.spv", .{ build_root, shader });
 
                 const run = b.addSystemCommand(&.{
                     glslang_path,
                     "-V",
+                    input_path,
                     "-o",
+                    output_path,
+                    "--target-env",
+                    "vulkan1.3",
                 });
-                const output = run.addOutputFileArg(output_name);
-                run.addFileArg(input);
-                run.addArgs(&.{ "--target-env", "vulkan1.3" });
 
+                run.step.dependOn(&mkdir.step);
                 shader_step.dependOn(&run.step);
-                _ = output;
             }
         } else {
             std.log.warn("glslangValidator not found, shader compilation disabled", .{});
@@ -69,6 +75,7 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
+    exe.step.dependOn(shader_step);
 
     b.installArtifact(exe);
 
@@ -102,7 +109,7 @@ pub fn build(b: *std.Build) void {
     const demo_mesh = b.addExecutable(.{
         .name = "demo_mesh",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("examples/demo_mesh_zig/main.zig"),
+            .root_source_file = b.path("examples/demo_mesh/main.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{
@@ -110,6 +117,7 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
+    demo_mesh.step.dependOn(shader_step);
 
     const install_demo = b.addInstallArtifact(demo_mesh, .{});
     const demo_step = b.step("demo", "Build and run the demo_mesh example");
@@ -121,7 +129,7 @@ pub fn build(b: *std.Build) void {
     const stress_test = b.addExecutable(.{
         .name = "stress_test",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("examples/stress_test_ico_zig/main.zig"),
+            .root_source_file = b.path("examples/stress_test_ico/main.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{
@@ -129,6 +137,7 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
+    stress_test.step.dependOn(shader_step);
 
     const install_stress = b.addInstallArtifact(stress_test, .{});
     const stress_step = b.step("stress", "Build and run the stress_test example");
