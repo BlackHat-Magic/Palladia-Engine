@@ -145,5 +145,13 @@ pub const PointLightComponent = components.PointLightComponent;
 pub const PointLightContext = components.PointLightContext;
 
 test {
-    std.testing.refAllDeclsRecursive(@This());
+    std.testing.refAllDeclsRecursive(ecs);
+    std.testing.refAllDeclsRecursive(components);
+    std.testing.refAllDeclsRecursive(resource);
+    std.testing.refAllDeclsRecursive(system);
+    std.testing.refAllDeclsRecursive(systems);
+    std.testing.refAllDeclsRecursive(math);
+    std.testing.refAllDeclsRecursive(geometry);
+    std.testing.refAllDeclsRecursive(shader);
+    std.testing.refAllDeclsRecursive(material);
 }

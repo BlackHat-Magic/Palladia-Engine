@@ -40,6 +40,10 @@ pub fn Resources(comptime ResourceDefs: type) type {
             return @field(self.storage, name);
         }
 
+        pub fn getConst(self: *const Self, comptime name: []const u8) ?@FieldType(ResourceDefs, name) {
+            return @field(self.storage, name);
+        }
+
         pub fn has(self: *const Self, comptime name: []const u8) bool {
             return @field(self.storage, name) != null;
         }

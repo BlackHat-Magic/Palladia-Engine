@@ -37,8 +37,8 @@ test "ECS basic usage" {
 
 test "Resources" {
     const MyResources = struct {
-        time: palladia.system.Time,
-        score: u32,
+        time: *palladia.system.Time,
+        score: *u32,
     };
 
     var time = palladia.system.Time{ .dt = 0.016, .total = 1.0, .frame = 60 };
@@ -78,7 +78,7 @@ test "System with resources" {
     };
 
     const MyResources = struct {
-        time: palladia.system.Time,
+        time: *palladia.system.Time,
     };
 
     const MovementSystem = struct {
