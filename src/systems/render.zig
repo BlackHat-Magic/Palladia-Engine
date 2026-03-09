@@ -55,25 +55,7 @@ pub const RenderSystem = struct {
         }
     }
 
-    pub fn getPointLightContext() pointlight.Context {
-        return .{
-            .device = undefined,
-            .ssbo = &point_ssbo,
-            .ssbo_size = &point_size,
-            .dirty = &point_dirty,
-        };
-    }
-
-    pub fn getAmbientLightContext() ambientlight.Context {
-        return .{
-            .device = undefined,
-            .ssbo = &ambient_ssbo,
-            .ssbo_size = &ambient_size,
-            .dirty = &ambient_dirty,
-        };
-    }
-
-    pub fn getPointLightContextWithDevice(device: *sdl.SDL_GPUDevice) pointlight.Context {
+    pub fn getPointLightContext(device: *sdl.SDL_GPUDevice) pointlight.Context {
         return .{
             .device = device,
             .ssbo = &point_ssbo,
@@ -82,7 +64,7 @@ pub const RenderSystem = struct {
         };
     }
 
-    pub fn getAmbientLightContextWithDevice(device: *sdl.SDL_GPUDevice) ambientlight.Context {
+    pub fn getAmbientLightContext(device: *sdl.SDL_GPUDevice) ambientlight.Context {
         return .{
             .device = device,
             .ssbo = &ambient_ssbo,
@@ -95,11 +77,11 @@ pub const RenderSystem = struct {
         ensureSSBOs(res.device);
 
         if (point_dirty and point_ssbo != null) {
-            var ctx = getPointLightContextWithDevice(res.device);
+            var ctx = getPointLightContext(res.device);
             pointlight.PointLightComponent.rebuildSSBO(world, &ctx);
         }
         if (ambient_dirty and ambient_ssbo != null) {
-            var ctx = getAmbientLightContextWithDevice(res.device);
+            var ctx = getAmbientLightContext(res.device);
             ambientlight.AmbientLightComponent.rebuildSSBO(world, &ctx);
         }
 

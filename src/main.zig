@@ -41,7 +41,9 @@ test "Resources" {
         score: *u32,
     };
 
-    var time = palladia.system.Time{ .dt = 0.016, .frame = 60 };
+    var time = palladia.system.Time.init();
+    time.dt = 0.016;
+    time.frame = 60;
     var score: u32 = 100;
 
     const ResourcesStore = palladia.resource.Resources(MyResources);
@@ -112,7 +114,8 @@ test "System with resources" {
     try world.add("position", entity, .{ 0, 0, 0 }, null);
     try world.add("velocity", entity, .{ 1, 2, 3 }, null);
 
-    var time = palladia.system.Time{ .dt = 0.5 };
+    var time = palladia.system.Time.init();
+    time.dt = 0.5;
     const ResourcesStore = palladia.resource.Resources(MyResources);
     var resources = ResourcesStore.init();
     resources.set("time", &time);

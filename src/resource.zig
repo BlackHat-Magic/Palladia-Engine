@@ -49,38 +49,3 @@ pub fn Resources(comptime ResourceDefs: type) type {
         }
     };
 }
-
-pub fn buildResourceStruct(
-    comptime ResourceDefs: type,
-    comptime ResourcesStore: type,
-    comptime ResDecl: type,
-    resources: *const ResourcesStore,
-) ResDecl {
-    const res_fields = @typeInfo(ResDecl).@"struct".fields;
-    var result: ResDecl = undefined;
-
-    inline for (res_fields) |field| {
-        const name = field.name;
-        const ResType = @FieldType(ResourceDefs, name);
-
-        comptime {
-            if (@typeInfo(field.type) != .pointer) {
-                @compileError("Resource field '" ++ name ++ "' must be a pointer type (*T or *const T)");
-            }
-            const field_child = @typeInfo(field.type).pointer.child;
-            const res_child = if (@typeInfo(ResType) == .pointer) @typeInfo(ResType).pointer.child else ResType;
-            if (field_child != res_child) {
-                @compileError("Resource '" ++ name ++ "' type mismatch: expected " ++ @typeName(res_child) ++ ", found " ++ @typeName(field_child));
-            }
-        }
-
-        const value = resources.get(name);
-        if (value == null) {
-            std.debug.panic("Resource '{s}' not set", .{name});
-        }
-
-        @field(result, name) = value.?;
-    }
-
-    return result;
-}

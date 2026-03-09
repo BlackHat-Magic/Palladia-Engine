@@ -13,8 +13,8 @@ pub const SystemStage = enum(usize) {
 pub const Time = struct {
     dt: f32 = 0,
     frame: u64 = 0,
-    start_ns: u64 = 0,
-    last_ns: u64 = 0,
+    start_ns: u64,
+    last_ns: u64,
 
     pub fn elapsed(self: *const Time) f32 {
         const now_ns = sdl.SDL_GetTicksNS();
@@ -22,8 +22,10 @@ pub const Time = struct {
     }
 
     pub fn init() Time {
+        const now = sdl.SDL_GetTicksNS();
         return .{
-            .last_ns = sdl.SDL_GetTicksNS(),
+            .start_ns = now,
+            .last_ns = now,
         };
     }
 
@@ -33,10 +35,6 @@ pub const Time = struct {
         self.dt = @as(f32, @floatFromInt(delta_ns)) / 1_000_000_000.0;
         self.frame += 1;
         self.last_ns = now_ns;
-    }
-
-    pub fn total(_: *const Time) f32 {
-        return @as(f32, @floatFromInt(sdl.SDL_GetTicksNS())) / 1_000_000_000.0;
     }
 };
 

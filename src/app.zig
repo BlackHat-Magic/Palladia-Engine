@@ -47,9 +47,10 @@ pub fn build(comptime root_plugin: type) type {
             const World = world_mod.World(Components);
 
             const all_systems = comptime blk: {
-                var arr: [Systems.len + user_systems.len]type = undefined;
+                var arr: [Systems.len + user_systems.len + 1]type = undefined;
                 for (Systems, 0..) |sys, i| arr[i] = sys;
                 for (user_systems, 0..) |sys, i| arr[Systems.len + i] = sys;
+                arr[Systems.len + user_systems.len] = render_system_mod.RenderSystem;
                 break :blk arr;
             };
             const TypedScheduler = scheduler_mod.Scheduler(World, ResourceDefs, all_systems);
@@ -95,11 +96,13 @@ pub fn build(comptime root_plugin: type) type {
 
             var time = Time.init();
             var input = Input.init();
+            var active_camera: context.ActiveCamera = .{};
 
             resources.set("device", device);
             resources.set("window", window);
             resources.set("time", &time);
             resources.set("input", &input);
+            resources.set("active_camera", &active_camera);
 
             const Ctx = Context(Components, ResourceDefs);
             var ctx: Ctx = .{
@@ -107,8 +110,6 @@ pub fn build(comptime root_plugin: type) type {
                 .window = window,
                 .world = &world,
                 .resources = &resources,
-                .time = &time,
-                .input = &input,
                 .allocator = allocator,
                 .depth_format = depth_format,
             };
@@ -136,13 +137,8 @@ pub fn build(comptime root_plugin: type) type {
                 TypedScheduler.runStage(.PostUpdate, &world, &resources);
 
                 if (ctx.camera_entity) |cam| {
-                    var active_camera: context.ActiveCamera = .{ .entity = cam };
-                    const render_res = render_system_mod.RenderSystem.Res{
-                        .device = device,
-                        .window = window,
-                        .active_camera = &active_camera,
-                    };
-                    render_system_mod.RenderSystem.run(render_res, &world);
+                    active_camera.entity = cam;
+                    TypedScheduler.runStage(.Render, &world, &resources);
                 }
             }
 
@@ -156,8 +152,6 @@ pub fn build(comptime root_plugin: type) type {
                 window: *sdl.SDL_Window,
                 world: *world_mod.World(Components),
                 resources: *resource_mod.Resources(ResourceDefs),
-                time: *Time,
-                input: *Input,
                 allocator: std.mem.Allocator,
                 camera_entity: ?Entity = null,
                 depth_format: sdl.SDL_GPUTextureFormat,

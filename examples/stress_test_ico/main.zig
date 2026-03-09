@@ -28,6 +28,7 @@ const ResourceDefs = struct {
     window: *sdl.SDL_Window,
     time: *Time,
     input: *Input,
+    active_camera: *const palladia.system.ActiveCamera,
 };
 
 const app_config = palladia.app.AppConfig{
@@ -122,7 +123,7 @@ fn setup(ctx: *Ctx) void {
         std.log.info("spawned {} icos", .{spawned});
     }
 
-    var ambient_ctx = palladia.systems.RenderSystem.getAmbientLightContextWithDevice(device);
+    var ambient_ctx = palladia.systems.RenderSystem.getAmbientLightContext(device);
     const ambient_light = ctx.world.createEntity();
     ctx.world.add("transform", ambient_light, .{
         .position = .{ 0, 0, 0 },
@@ -133,7 +134,7 @@ fn setup(ctx: *Ctx) void {
         .color = .{ .r = 1, .g = 1, .b = 1, .a = 0.1 },
     }, &ambient_ctx) catch {};
 
-    var point_ctx = palladia.systems.RenderSystem.getPointLightContextWithDevice(device);
+    var point_ctx = palladia.systems.RenderSystem.getPointLightContext(device);
     for (0..4) |_| {
         const point_light = ctx.world.createEntity();
 

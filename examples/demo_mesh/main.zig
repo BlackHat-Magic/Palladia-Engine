@@ -29,6 +29,7 @@ const ResourceDefs = struct {
     window: *sdl.SDL_Window,
     time: *Time,
     input: *Input,
+    active_camera: *const palladia.system.ActiveCamera,
 };
 
 const Rotation = struct {
@@ -119,7 +120,7 @@ fn setup(ctx: *Ctx) void {
         ctx.world.add("material", mesh_entity, mat, null) catch {};
     }
 
-    var ambient_ctx = palladia.systems.RenderSystem.getAmbientLightContextWithDevice(device);
+    var ambient_ctx = palladia.systems.RenderSystem.getAmbientLightContext(device);
     const ambient_light = ctx.world.createEntity();
     ctx.world.add("transform", ambient_light, .{
         .position = .{ 0, 0, 0 },
@@ -130,7 +131,7 @@ fn setup(ctx: *Ctx) void {
         .color = .{ .r = 1, .g = 1, .b = 1, .a = 0.1 },
     }, &ambient_ctx) catch {};
 
-    var point_ctx = palladia.systems.RenderSystem.getPointLightContextWithDevice(device);
+    var point_ctx = palladia.systems.RenderSystem.getPointLightContext(device);
     const point_light = ctx.world.createEntity();
     ctx.world.add("transform", point_light, .{
         .position = .{ 2, 2, -2 },
