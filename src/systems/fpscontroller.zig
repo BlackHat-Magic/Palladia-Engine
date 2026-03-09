@@ -9,7 +9,7 @@ const Transform = @import("../components/transform.zig").Transform;
 const FPSCameraController = @import("../components/fpscameracontroller.zig").FPSCameraController;
 
 pub const FPSCameraEventSystem = struct {
-    pub const stage = SystemStage.event;
+    pub const stage = SystemStage.PreUpdate;
 
     pub const Query = struct {
         transform: *Transform,
@@ -51,7 +51,7 @@ pub const FPSCameraEventSystem = struct {
 };
 
 pub const FPSCameraUpdateSystem = struct {
-    pub const stage = SystemStage.update;
+    pub const stage = SystemStage.Update;
 
     pub const Query = struct {
         transform: *Transform,

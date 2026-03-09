@@ -12,7 +12,7 @@ const pointlight = @import("../components/pointlight.zig");
 const ambientlight = @import("../components/ambientlight.zig");
 
 pub const RenderSystem = struct {
-    pub const stage = SystemStage.render;
+    pub const stage = SystemStage.Render;
 
     pub const Res = struct {
         device: *sdl.SDL_GPUDevice,
@@ -29,6 +29,16 @@ pub const RenderSystem = struct {
     var cached_height: u32 = 0;
     var point_dirty: bool = true;
     var ambient_dirty: bool = true;
+    var depth_format: sdl.SDL_GPUTextureFormat = sdl.SDL_GPU_TEXTUREFORMAT_D16_UNORM;
+
+    pub fn getDepthFormat() sdl.SDL_GPUTextureFormat {
+        return depth_format;
+    }
+
+    pub fn initDepthFormat(device: *sdl.SDL_GPUDevice) void {
+        const common = @import("../material/common.zig");
+        depth_format = common.getSupportedDepthFormat(device);
+    }
 
     pub fn deinit(device: *sdl.SDL_GPUDevice) void {
         if (depth_texture) |tex| {
@@ -140,7 +150,6 @@ pub const RenderSystem = struct {
         };
 
         const pass = sdl.SDL_BeginGPURenderPass(cmd, &color_target, 1, &depth_target);
-        defer sdl.SDL_EndGPURenderPass(pass);
 
         const viewport = sdl.SDL_GPUViewport{
             .x = 0,
@@ -249,6 +258,7 @@ pub const RenderSystem = struct {
             }
         }
 
+        sdl.SDL_EndGPURenderPass(pass);
         _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
     }
 
@@ -263,7 +273,7 @@ pub const RenderSystem = struct {
 
         const depth_info = sdl.SDL_GPUTextureCreateInfo{
             .type = sdl.SDL_GPU_TEXTURETYPE_2D,
-            .format = sdl.SDL_GPU_TEXTUREFORMAT_D24_UNORM,
+            .format = depth_format,
             .usage = sdl.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
             .width = width,
             .height = height,

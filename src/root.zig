@@ -115,6 +115,7 @@ pub const material = struct {
     pub const loadTexture = @import("material/common.zig").loadTexture;
     pub const createWhiteTexture = @import("material/common.zig").createWhiteTexture;
     pub const createDefaultSampler = @import("material/common.zig").createDefaultSampler;
+    pub const getSupportedDepthFormat = @import("material/common.zig").getSupportedDepthFormat;
 
     pub const createBasicMaterial = @import("material/basic.zig").createBasicMaterial;
     pub const BasicMaterialArgs = @import("material/basic.zig").BasicMaterialArgs;
@@ -132,6 +133,22 @@ pub const material = struct {
     pub const ui_vert_spv = @import("material/ui.zig").ui_vert_spv;
     pub const ui_frag_spv = @import("material/ui.zig").ui_frag_spv;
 };
+
+pub const app = struct {
+    pub const App = @import("app.zig").build;
+    pub const Plugin = @import("app.zig").Plugin;
+    pub const AppConfig = @import("app.zig").AppConfig;
+    pub const RenderTarget = @import("app.zig").RenderTarget;
+    pub const TimeSystem = @import("app.zig").TimeSystem;
+    pub const InputSystem = @import("app.zig").InputSystem;
+};
+
+pub const RootPlugin = app.Plugin(.{
+    .systems = .{
+        app.TimeSystem,
+        app.InputSystem,
+    },
+});
 
 pub const World = ecs.World;
 pub const Transform = components.Transform;
@@ -154,4 +171,5 @@ test {
     std.testing.refAllDeclsRecursive(geometry);
     std.testing.refAllDeclsRecursive(shader);
     std.testing.refAllDeclsRecursive(material);
+    std.testing.refAllDeclsRecursive(app);
 }

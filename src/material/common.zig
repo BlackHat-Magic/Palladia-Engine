@@ -264,6 +264,39 @@ pub fn createWhiteTexture(device: *sdl.SDL_GPUDevice) !*sdl.SDL_GPUTexture {
     return tex.?;
 }
 
+pub fn getSupportedDepthFormat(device: *sdl.SDL_GPUDevice) sdl.SDL_GPUTextureFormat {
+    const candidates = [_]sdl.SDL_GPUTextureFormat{
+        sdl.SDL_GPU_TEXTUREFORMAT_D16_UNORM,
+        sdl.SDL_GPU_TEXTUREFORMAT_D24_UNORM,
+        sdl.SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
+        sdl.SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT,
+        sdl.SDL_GPU_TEXTUREFORMAT_D32_FLOAT_S8_UINT,
+    };
+
+    for (candidates) |format| {
+        const tex_info = sdl.SDL_GPUTextureCreateInfo{
+            .type = sdl.SDL_GPU_TEXTURETYPE_2D,
+            .format = format,
+            .usage = sdl.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
+            .width = 1,
+            .height = 1,
+            .layer_count_or_depth = 1,
+            .num_levels = 1,
+            .sample_count = sdl.SDL_GPU_SAMPLECOUNT_1,
+            .props = 0,
+        };
+        const test_tex = sdl.SDL_CreateGPUTexture(device, &tex_info);
+        if (test_tex) |tex| {
+            sdl.SDL_ReleaseGPUTexture(device, tex);
+            std.log.info("Selected depth format: {} (D16_UNORM=0, D24_UNORM=1, D32_FLOAT=2, D24_UNORM_S8_UINT=3, D32_FLOAT_S8_UINT=4)", .{format});
+            return format;
+        }
+    }
+
+    std.log.err("No supported depth format found, falling back to D16_UNORM", .{});
+    return sdl.SDL_GPU_TEXTUREFORMAT_D16_UNORM;
+}
+
 pub fn createDefaultSampler(device: *sdl.SDL_GPUDevice) !*sdl.SDL_GPUSampler {
     const sampler_info = sdl.SDL_GPUSamplerCreateInfo{
         .min_filter = sdl.SDL_GPU_FILTER_LINEAR,

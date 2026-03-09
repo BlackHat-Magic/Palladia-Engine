@@ -2,7 +2,6 @@ const std = @import("std");
 const SystemStage = @import("context.zig").SystemStage;
 const Entity = @import("../pool.zig").Entity;
 const Resources = @import("../resource.zig").Resources;
-const buildResourceStruct = @import("../resource.zig").buildResourceStruct;
 
 pub fn validateSystem(comptime System: type) void {
     const has_run = @hasDecl(System, "run");
@@ -21,7 +20,7 @@ pub fn getSystemStage(comptime System: type) SystemStage {
     if (@hasDecl(System, "stage")) {
         return System.stage;
     }
-    return .update;
+    return .Update;
 }
 
 pub fn Scheduler(
@@ -30,64 +29,20 @@ pub fn Scheduler(
     comptime systems: anytype,
 ) type {
     const ResourcesStore = Resources(ResourceDefs);
+    const stage_count = @typeInfo(SystemStage).@"enum".fields.len;
 
-    comptime var event_count: usize = 0;
-    comptime var update_count: usize = 0;
-    comptime var render_count: usize = 0;
-
+    comptime var counts: [stage_count]usize = @splat(0);
     inline for (systems) |Sys| {
         validateSystem(Sys);
-        const stage = getSystemStage(Sys);
-
-        switch (stage) {
-            .event => event_count += 1,
-            .update => update_count += 1,
-            .render => render_count += 1,
-        }
-    }
-
-    comptime var event_systems: [event_count]type = undefined;
-    comptime var event_idx: usize = 0;
-    comptime var update_systems: [update_count]type = undefined;
-    comptime var update_idx: usize = 0;
-    comptime var render_systems: [render_count]type = undefined;
-    comptime var render_idx: usize = 0;
-
-    inline for (systems) |Sys| {
-        const stage = getSystemStage(Sys);
-
-        switch (stage) {
-            .event => {
-                event_systems[event_idx] = Sys;
-                event_idx += 1;
-            },
-            .update => {
-                update_systems[update_idx] = Sys;
-                update_idx += 1;
-            },
-            .render => {
-                render_systems[render_idx] = Sys;
-                render_idx += 1;
-            },
-        }
+        counts[@intFromEnum(getSystemStage(Sys))] += 1;
     }
 
     return struct {
-        pub fn runEvent(world: *World, resources: *const ResourcesStore) void {
-            inline for (event_systems) |Sys| {
-                runSystem(Sys, world, resources);
-            }
-        }
-
-        pub fn runUpdate(world: *World, resources: *const ResourcesStore) void {
-            inline for (update_systems) |Sys| {
-                runSystem(Sys, world, resources);
-            }
-        }
-
-        pub fn runRender(world: *World, resources: *const ResourcesStore) void {
-            inline for (render_systems) |Sys| {
-                runSystem(Sys, world, resources);
+        pub fn runStage(comptime stage: SystemStage, world: *World, resources: *const ResourcesStore) void {
+            inline for (systems) |Sys| {
+                if (comptime getSystemStage(Sys) == stage) {
+                    runSystem(Sys, world, resources);
+                }
             }
         }
 
@@ -97,7 +52,7 @@ pub fn Scheduler(
             const has_run_entity = @hasDecl(Sys, "runEntity");
 
             if (has_res) {
-                const res = buildResourceStruct(ResourceDefs, ResourcesStore, Sys.Res, resources);
+                const res = buildRes(Sys.Res, resources);
 
                 if (has_run) {
                     Sys.run(res, world);
@@ -106,20 +61,27 @@ pub fn Scheduler(
                 }
             } else {
                 if (has_run) {
-                    if (hasParams(Sys.run, 2)) {
-                        Sys.run(world, resources);
-                    } else {
-                        Sys.run(world);
-                    }
+                    Sys.run(world);
                 } else if (has_run_entity) {
                     runQuerySystemNoRes(Sys, world);
                 }
             }
         }
 
-        fn hasParams(comptime fn_ptr: anytype, comptime count: usize) bool {
-            const fn_info = @typeInfo(@TypeOf(fn_ptr)).@"fn";
-            return fn_info.params.len >= count;
+        fn buildRes(comptime ResDecl: type, resources: *const ResourcesStore) ResDecl {
+            const res_fields = @typeInfo(ResDecl).@"struct".fields;
+            var result: ResDecl = undefined;
+
+            inline for (res_fields) |field| {
+                const name = field.name;
+                const value = resources.get(name);
+                if (value == null) {
+                    std.debug.panic("Resource '{s}' not set", .{name});
+                }
+                @field(result, name) = value.?;
+            }
+
+            return result;
         }
 
         fn runQuerySystem(
@@ -197,4 +159,30 @@ pub fn Scheduler(
             }
         }
     };
+}
+
+test "Scheduler groups systems by stage" {
+    const TestWorld = struct {
+        fn iter(_: *const @This(), _: []const u8) void {}
+        fn has(_: *const @This(), _: []const u8, _: u32) bool {
+            return false;
+        }
+    };
+
+    const SystemA = struct {
+        pub const stage = SystemStage.PreUpdate;
+        pub fn run(_: *TestWorld) void {}
+    };
+
+    const SystemB = struct {
+        pub const stage = SystemStage.Update;
+        pub fn run(_: *TestWorld) void {}
+    };
+
+    const SystemC = struct {
+        pub fn run(_: *TestWorld) void {}
+    };
+
+    const MyScheduler = Scheduler(TestWorld, struct {}, .{ SystemA, SystemB, SystemC });
+    _ = MyScheduler;
 }

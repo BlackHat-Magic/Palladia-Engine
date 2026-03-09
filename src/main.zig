@@ -41,7 +41,7 @@ test "Resources" {
         score: *u32,
     };
 
-    var time = palladia.system.Time{ .dt = 0.016, .total = 1.0, .frame = 60 };
+    var time = palladia.system.Time{ .dt = 0.016, .frame = 60 };
     var score: u32 = 100;
 
     const ResourcesStore = palladia.resource.Resources(MyResources);
@@ -112,12 +112,12 @@ test "System with resources" {
     try world.add("position", entity, .{ 0, 0, 0 }, null);
     try world.add("velocity", entity, .{ 1, 2, 3 }, null);
 
-    var time = palladia.system.Time{ .dt = 0.5, .total = 0, .frame = 0 };
+    var time = palladia.system.Time{ .dt = 0.5 };
     const ResourcesStore = palladia.resource.Resources(MyResources);
     var resources = ResourcesStore.init();
     resources.set("time", &time);
 
-    MyScheduler.runUpdate(&world, &resources);
+    MyScheduler.runStage(.Update, &world, &resources);
 
     const pos = world.getConst("position", entity).?;
     try std.testing.expectApproxEqAbs(@as(f32, 0.5), pos[0], 0.001);

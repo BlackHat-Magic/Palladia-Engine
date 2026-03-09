@@ -20,6 +20,7 @@ pub const BasicMaterialArgs = struct {
 pub fn createBasicMaterial(
     device: *sdl.SDL_GPUDevice,
     format: sdl.SDL_GPUTextureFormat,
+    depth_format: sdl.SDL_GPUTextureFormat,
     args: BasicMaterialArgs,
 ) !MaterialComponent {
     const vertex_shader = try loadShaderFromBytes(
@@ -43,7 +44,7 @@ pub fn createBasicMaterial(
             .num_color_targets = 1,
             .color_target_descriptions = &[_]sdl.SDL_GPUColorTargetDescription{.{ .format = format }},
             .has_depth_stencil_target = true,
-            .depth_stencil_format = sdl.SDL_GPU_TEXTUREFORMAT_D24_UNORM,
+            .depth_stencil_format = depth_format,
         },
         .primitive_type = sdl.SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
         .vertex_shader = vertex_shader,

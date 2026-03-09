@@ -136,6 +136,9 @@ pub fn build(b: *std.Build) void {
 
     const run_stress = b.addRunArtifact(stress_test);
     stress_step.dependOn(&run_stress.step);
+
+    const stress_build_step = b.step("stress-build", "Build the stress_test example without running");
+    stress_build_step.dependOn(&install_stress.step);
 }
 
 pub const ShaderSpec = struct {
