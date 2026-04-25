@@ -6,6 +6,7 @@ const resource_mod = @import("resource.zig");
 const scheduler_mod = @import("system/scheduler.zig");
 const context = @import("system/context.zig");
 const render_system_mod = @import("systems/render.zig");
+const registry_mod = @import("draw2d/registry.zig");
 
 const Entity = pool_mod.Entity;
 const SystemStage = context.SystemStage;
@@ -82,6 +83,10 @@ pub fn build(comptime root_plugin: type) type {
             }
 
             render_system_mod.RenderSystem.initDepthFormat(device);
+            if (!sdl.TTF_Init()) {
+                std.debug.panic("Failed to init SDL_ttf: {s}", .{sdl.SDL_GetError()});
+            }
+            defer sdl.TTF_Quit();
             const depth_format = render_system_mod.RenderSystem.getDepthFormat();
 
             var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -104,6 +109,14 @@ pub fn build(comptime root_plugin: type) type {
             resources.set("input", &input);
             resources.set("active_camera", &active_camera);
 
+            const tex_registry = allocator.create(registry_mod.TextureRegistry) catch @panic("OOM creating texture_registry");
+            tex_registry.* = .{};
+            resources.set("texture_registry", tex_registry);
+
+            const font_registry = allocator.create(registry_mod.FontRegistry) catch @panic("OOM creating font_registry");
+            font_registry.* = .{};
+            resources.set("font_registry", font_registry);
+
             const Ctx = Context(Components, ResourceDefs);
             var ctx: Ctx = .{
                 .device = device,
@@ -125,6 +138,8 @@ pub fn build(comptime root_plugin: type) type {
                     setup_fn(&ctx, &world, &resources);
                 }
             }
+
+            render_system_mod.RenderSystem.initDraw2D(device, window, allocator) catch @panic("Failed to init Draw2D renderer");
 
             mainLoop: while (true) {
                 TypedScheduler.runStage(.PreUpdate, &world, &resources);
