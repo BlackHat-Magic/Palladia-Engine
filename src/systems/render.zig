@@ -277,7 +277,7 @@ pub const RenderSystem = struct {
             }
         }
 
-        if (draw2d_renderer != null and ui_pipeline != null) {
+        if (@hasField(@TypeOf(world.pools), "draw_canvas_pool") and draw2d_renderer != null and ui_pipeline != null) {
             if (res.texture_registry) |tex_reg| {
                 if (res.font_registry) |font_reg| {
                     var rr = &draw2d_renderer.?;
@@ -294,7 +294,7 @@ pub const RenderSystem = struct {
                         z_index: f32,
                     };
 
-                    var canvas_list = std.ArrayList(CanvasEntry).init(alloc);
+                    var canvas_list = std.ArrayList(CanvasEntry).initCapacity(alloc, 64);
                     var canvas_iter = world.iter("draw_canvas");
                     while (canvas_iter.next()) |entry| {
                         const canvas = world.get("draw_canvas", entry.entity) orelse continue;
@@ -403,9 +403,9 @@ pub const RenderSystem = struct {
                                 _ = rr.vertex_cache.remove(@intCast(ce.entity));
                             }
 
-                            var vertices = std.ArrayList(UIVertex).init(alloc);
+                            var vertices = std.ArrayList(UIVertex).initCapacity(alloc, 64);
                             defer vertices.deinit(alloc);
-                            var indices = std.ArrayList(u32).init(alloc);
+                            var indices = std.ArrayList(u32).initCapacity(alloc, 128);
                             defer indices.deinit(alloc);
 
                             var bind_texture: *sdl.SDL_GPUTexture = rr.white_texture;
