@@ -66,12 +66,17 @@ pub fn createUIMaterial(
                 .instance_step_rate = 0,
             }},
             .num_vertex_buffers = 1,
-            .num_vertex_attributes = 4,
+            .num_vertex_attributes = 9,
             .vertex_attributes = &[_]sdl.SDL_GPUVertexAttribute{
                 .{ .location = 0, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIVertex, "position") },
                 .{ .location = 1, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIVertex, "res") },
                 .{ .location = 2, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4, .offset = @offsetOf(UIVertex, "color") },
                 .{ .location = 3, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIVertex, "uv") },
+                .{ .location = 4, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIVertex, "center") },
+                .{ .location = 5, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,  .offset = @offsetOf(UIVertex, "rot_cos") },
+                .{ .location = 6, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,  .offset = @offsetOf(UIVertex, "rot_sin") },
+                .{ .location = 7, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIVertex, "half_size") },
+                .{ .location = 8, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,  .offset = @offsetOf(UIVertex, "corner_radius") },
             },
         },
         .rasterizer_state = .{
@@ -109,4 +114,9 @@ pub const UIVertex = extern struct {
     res: [2]f32,
     color: [4]f32,
     uv: [2]f32,
+    center: [2]f32,
+    rot_cos: f32,
+    rot_sin: f32,
+    half_size: [2]f32,
+    corner_radius: f32,
 };
