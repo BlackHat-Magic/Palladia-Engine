@@ -21,6 +21,7 @@ pub fn build(b: *std.Build) void {
     mod.linkLibrary(sdl_lib);
     mod.linkLibrary(sdl_test_lib);
     mod.linkSystemLibrary("SDL3_image", .{});
+    mod.linkSystemLibrary("sdl3-ttf", .{});
 
     const shader_step = b.step("shaders", "Compile built-in shaders to SPIR-V");
 
