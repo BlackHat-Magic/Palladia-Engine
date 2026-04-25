@@ -76,6 +76,10 @@ pub fn Scheduler(
                 const name = field.name;
                 const value = resources.get(name);
                 if (value == null) {
+                    if (@typeInfo(field.type) == .optional) {
+                        @field(result, name) = null;
+                        continue;
+                    }
                     std.debug.panic("Resource '{s}' not set", .{name});
                 }
                 @field(result, name) = value.?;

@@ -4,12 +4,17 @@ const math = @import("../math.zig");
 const SystemStage = @import("../system/context.zig").SystemStage;
 const ActiveCamera = @import("../system/context.zig").ActiveCamera;
 const Entity = @import("../pool.zig").Entity;
+const uploadIndices = @import("../geometry/common.zig").uploadIndices;
 const Transform = @import("../components/transform.zig").Transform;
 const CameraComponent = @import("../components/camera.zig").CameraComponent;
 const MeshComponent = @import("../components/mesh.zig").MeshComponent;
 const MaterialComponent = @import("../components/material.zig").MaterialComponent;
 const pointlight = @import("../components/pointlight.zig");
 const ambientlight = @import("../components/ambientlight.zig");
+const Draw2DRenderer = @import("../draw2d/renderer.zig").Draw2DRenderer;
+const UIVertex = @import("../material/ui.zig").UIVertex;
+const draw2d = @import("../components/draw2d.zig");
+const registry = @import("../draw2d/registry.zig");
 
 pub const RenderSystem = struct {
     pub const stage = SystemStage.Render;
@@ -18,6 +23,8 @@ pub const RenderSystem = struct {
         device: *sdl.SDL_GPUDevice,
         window: *sdl.SDL_Window,
         active_camera: *const ActiveCamera,
+        texture_registry: ?*registry.TextureRegistry = null,
+        font_registry: ?*registry.FontRegistry = null,
     };
 
     var depth_texture: ?*sdl.SDL_GPUTexture = null;
@@ -30,6 +37,10 @@ pub const RenderSystem = struct {
     var point_dirty: bool = true;
     var ambient_dirty: bool = true;
     var depth_format: sdl.SDL_GPUTextureFormat = sdl.SDL_GPU_TEXTUREFORMAT_D16_UNORM;
+    var draw2d_renderer: ?Draw2DRenderer = null;
+    var ui_pipeline: ?*sdl.SDL_GPUGraphicsPipeline = null;
+    var ui_vert_shader: ?*sdl.SDL_GPUShader = null;
+    var ui_frag_shader: ?*sdl.SDL_GPUShader = null;
 
     pub fn getDepthFormat() sdl.SDL_GPUTextureFormat {
         return depth_format;
@@ -38,6 +49,16 @@ pub const RenderSystem = struct {
     pub fn initDepthFormat(device: *sdl.SDL_GPUDevice) void {
         const common = @import("../material/common.zig");
         depth_format = common.getSupportedDepthFormat(device);
+    }
+
+    pub fn initDraw2D(device: *sdl.SDL_GPUDevice, allocator: std.mem.Allocator, format: sdl.SDL_GPUTextureFormat) !void {
+        if (draw2d_renderer != null) return;
+        const ui_material = @import("../material/ui.zig");
+        const ui_mat = try ui_material.createUIMaterial(device, format, .{});
+        ui_pipeline = ui_mat.pipeline;
+        ui_vert_shader = ui_mat.vertex_shader;
+        ui_frag_shader = ui_mat.fragment_shader;
+        draw2d_renderer = try Draw2DRenderer.init(allocator, device);
     }
 
     pub fn deinit(device: *sdl.SDL_GPUDevice) void {
@@ -52,6 +73,22 @@ pub const RenderSystem = struct {
         if (ambient_ssbo) |buf| {
             sdl.SDL_ReleaseGPUBuffer(device, buf);
             ambient_ssbo = null;
+        }
+        if (draw2d_renderer) |*r| {
+            r.deinit(device);
+            draw2d_renderer = null;
+        }
+        if (ui_pipeline) |p| {
+            sdl.SDL_ReleaseGPUGraphicsPipeline(device, p);
+            ui_pipeline = null;
+        }
+        if (ui_vert_shader) |s| {
+            sdl.SDL_ReleaseGPUShader(device, s);
+            ui_vert_shader = null;
+        }
+        if (ui_frag_shader) |s| {
+            sdl.SDL_ReleaseGPUShader(device, s);
+            ui_frag_shader = null;
         }
     }
 
@@ -240,6 +277,245 @@ pub const RenderSystem = struct {
             }
         }
 
+        if (draw2d_renderer != null and ui_pipeline != null) {
+            if (res.texture_registry) |tex_reg| {
+                if (res.font_registry) |font_reg| {
+                    var rr = &draw2d_renderer.?;
+
+                    const res_w: f32 = @floatFromInt(width);
+                    const res_h: f32 = @floatFromInt(height);
+
+                    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+                    defer arena.deinit();
+                    const alloc = arena.allocator();
+
+                    const CanvasEntry = struct {
+                        entity: Entity,
+                        z_index: f32,
+                    };
+
+                    var canvas_list = std.ArrayList(CanvasEntry).init(alloc);
+                    var canvas_iter = world.iter("draw_canvas");
+                    while (canvas_iter.next()) |entry| {
+                        const canvas = world.get("draw_canvas", entry.entity) orelse continue;
+                        if (canvas.commands.items.len == 0) continue;
+                        canvas_list.append(.{
+                            .entity = entry.entity,
+                            .z_index = canvas.z_index,
+                        }) catch continue;
+                    }
+
+                    if (canvas_list.items.len > 0) {
+                        std.mem.sort(CanvasEntry, canvas_list.items, {}, struct {
+                            fn lt(_: void, a: CanvasEntry, b: CanvasEntry) bool {
+                                return a.z_index < b.z_index;
+                            }
+                        }.lt);
+
+                        for (canvas_list.items) |ce| {
+                            const canvas = world.get("draw_canvas", ce.entity) orelse continue;
+                            if (canvas.commands.items.len == 0) continue;
+
+                            const transform = world.get("transform", ce.entity);
+                            const offset_x: f32 = if (transform) |t| t.position[0] else 0;
+                            const offset_y: f32 = if (transform) |t| t.position[1] else 0;
+
+                            var hasher = std.hash.Wyhash.init(0);
+                            for (canvas.commands.items) |dc| {
+                                switch (dc) {
+                                    .rect => |r| {
+                                        hasher.update(std.mem.asBytes(&r.x));
+                                        hasher.update(std.mem.asBytes(&r.y));
+                                        hasher.update(std.mem.asBytes(&r.w));
+                                        hasher.update(std.mem.asBytes(&r.h));
+                                        hasher.update(std.mem.asBytes(&r.color));
+                                        hasher.update(std.mem.asBytes(&r.texture_id));
+                                        hasher.update(std.mem.asBytes(&r.filled));
+                                        hasher.update(std.mem.asBytes(&r.border_thickness));
+                                        hasher.update(std.mem.asBytes(&r.rotation));
+                                        hasher.update(std.mem.asBytes(&r.corner_radius));
+                                    },
+                                    .sprite => |s| {
+                                        hasher.update(std.mem.asBytes(&s.x));
+                                        hasher.update(std.mem.asBytes(&s.y));
+                                        hasher.update(std.mem.asBytes(&s.w));
+                                        hasher.update(std.mem.asBytes(&s.h));
+                                        hasher.update(std.mem.asBytes(&s.texture_id));
+                                        hasher.update(std.mem.asBytes(&s.uv));
+                                        hasher.update(std.mem.asBytes(&s.color));
+                                        hasher.update(std.mem.asBytes(&s.filled));
+                                        hasher.update(std.mem.asBytes(&s.border_thickness));
+                                        hasher.update(std.mem.asBytes(&s.rotation));
+                                        hasher.update(std.mem.asBytes(&s.corner_radius));
+                                    },
+                                    .text => |t| {
+                                        hasher.update(std.mem.asBytes(&t.x));
+                                        hasher.update(std.mem.asBytes(&t.y));
+                                        hasher.update(t.text);
+                                        hasher.update(std.mem.asBytes(&t.font_id));
+                                        hasher.update(std.mem.asBytes(&t.color));
+                                        hasher.update(std.mem.asBytes(&t.scale));
+                                        hasher.update(std.mem.asBytes(&t.rotation));
+                                    },
+                                }
+                            }
+                            const cmd_hash = hasher.final();
+
+                            const cached_opt = rr.vertex_cache.getPtr(@intCast(ce.entity));
+                            if (cached_opt) |cached| {
+                                if (cached.command_hash == cmd_hash) {
+                                    var cached_tex: *sdl.SDL_GPUTexture = rr.white_texture;
+                                    for (canvas.commands.items) |dc2| {
+                                        switch (dc2) {
+                                            .rect => |r| {
+                                                if (r.texture_id) |tid| {
+                                                    if (tex_reg.get(tid)) |tex| { cached_tex = tex; break; }
+                                                }
+                                            },
+                                            .sprite => |s| {
+                                                if (tex_reg.get(s.texture_id)) |tex| { cached_tex = tex; break; }
+                                            },
+                                            .text => {},
+                                        }
+                                    }
+                                    sdl.SDL_BindGPUGraphicsPipeline(pass, ui_pipeline.?);
+                                    const cvb = sdl.SDL_GPUBufferBinding{
+                                        .buffer = cached.vertex_buffer,
+                                        .offset = 0,
+                                    };
+                                    sdl.SDL_BindGPUVertexBuffers(pass, 0, &cvb, 1);
+                                    const cib = sdl.SDL_GPUBufferBinding{
+                                        .buffer = cached.index_buffer,
+                                        .offset = 0,
+                                    };
+                                    sdl.SDL_BindGPUIndexBuffer(pass, &cib, sdl.SDL_GPU_INDEXELEMENTSIZE_32BIT);
+                                    const ctex = sdl.SDL_GPUTextureSamplerBinding{
+                                        .texture = cached_tex,
+                                        .sampler = rr.ui_sampler,
+                                    };
+                                    sdl.SDL_BindGPUFragmentSamplers(pass, 0, &ctex, 1);
+                                    sdl.SDL_DrawGPUIndexedPrimitives(pass, cached.index_count, 1, 0, 0, 0);
+                                    continue;
+                                }
+                                // Hash changed: release old buffers and remove stale entry
+                                sdl.SDL_ReleaseGPUBuffer(res.device, cached.vertex_buffer);
+                                sdl.SDL_ReleaseGPUBuffer(res.device, cached.index_buffer);
+                                _ = rr.vertex_cache.remove(@intCast(ce.entity));
+                            }
+
+                            var vertices = std.ArrayList(UIVertex).init(alloc);
+                            defer vertices.deinit(alloc);
+                            var indices = std.ArrayList(u32).init(alloc);
+                            defer indices.deinit(alloc);
+
+                            var bind_texture: *sdl.SDL_GPUTexture = rr.white_texture;
+
+                            for (canvas.commands.items) |dc3| {
+                                switch (dc3) {
+                                    .rect => |r| {
+                                        const cx = offset_x + r.x + r.w / 2.0;
+                                        const cy = offset_y + r.y + r.h / 2.0;
+                                        const cr = @cos(r.rotation);
+                                        const sr = @sin(r.rotation);
+                                        rr.emitQuad(
+                                            &vertices, &indices, alloc,
+                                            offset_x + r.x, offset_y + r.y, r.w, r.h,
+                                            cx, cy, cr, sr, r.w / 2.0, r.h / 2.0,
+                                            r.corner_radius,
+                                            r.color,
+                                            res_w, res_h,
+                                            0, 0, 1, 1,
+                                        );
+                                        if (r.texture_id) |tid| {
+                                            if (tex_reg.get(tid)) |tex| {
+                                                bind_texture = tex;
+                                            }
+                                        }
+                                    },
+                                    .sprite => |s| {
+                                        const cx = offset_x + s.x + s.w / 2.0;
+                                        const cy = offset_y + s.y + s.h / 2.0;
+                                        const cr = @cos(s.rotation);
+                                        const sr = @sin(s.rotation);
+                                        rr.emitQuad(
+                                            &vertices, &indices, alloc,
+                                            offset_x + s.x, offset_y + s.y, s.w, s.h,
+                                            cx, cy, cr, sr, s.w / 2.0, s.h / 2.0,
+                                            s.corner_radius,
+                                            s.color,
+                                            res_w, res_h,
+                                            s.uv[0], s.uv[1], s.uv[2], s.uv[3],
+                                        );
+                                        if (tex_reg.get(s.texture_id)) |tex| {
+                                            bind_texture = tex;
+                                        }
+                                    },
+                                    .text => |t| {
+                                        if (font_reg.get(t.font_id)) |font| {
+                                            const entry = rr.text_cache.getOrCreate(
+                                                res.device, font, t.text, t.color, t.scale,
+                                            ) catch continue;
+                                            const cx = offset_x + t.x + entry.w / 2.0;
+                                            const cy = offset_y + t.y + entry.h / 2.0;
+                                            const cr = @cos(t.rotation);
+                                            const sr = @sin(t.rotation);
+                                            rr.emitQuad(
+                                                &vertices, &indices, alloc,
+                                                offset_x + t.x, offset_y + t.y, entry.w, entry.h,
+                                                cx, cy, cr, sr, entry.w / 2.0, entry.h / 2.0,
+                                                0,
+                                                t.color,
+                                                res_w, res_h,
+                                                0, 0, 1, 1,
+                                            );
+                                            bind_texture = entry.texture;
+                                        }
+                                    },
+                                }
+                            }
+
+                            if (vertices.items.len == 0 or indices.items.len == 0) continue;
+
+                            const vb = uploadUIVertices(res.device, vertices.items) catch continue;
+                            const ib = uploadIndices(res.device, indices.items) catch {
+                                sdl.SDL_ReleaseGPUBuffer(res.device, vb);
+                                continue;
+                            };
+
+                            _ = rr.vertex_cache.put(@intCast(ce.entity), .{
+                                .command_hash = cmd_hash,
+                                .vertex_buffer = vb,
+                                .index_buffer = ib,
+                                .index_count = @intCast(indices.items.len),
+                            }) catch {
+                                sdl.SDL_ReleaseGPUBuffer(res.device, vb);
+                                sdl.SDL_ReleaseGPUBuffer(res.device, ib);
+                                continue;
+                            };
+
+                            sdl.SDL_BindGPUGraphicsPipeline(pass, ui_pipeline.?);
+                            const vxb = sdl.SDL_GPUBufferBinding{
+                                .buffer = vb,
+                                .offset = 0,
+                            };
+                            sdl.SDL_BindGPUVertexBuffers(pass, 0, &vxb, 1);
+                            const ixb = sdl.SDL_GPUBufferBinding{
+                                .buffer = ib,
+                                .offset = 0,
+                            };
+                            sdl.SDL_BindGPUIndexBuffer(pass, &ixb, sdl.SDL_GPU_INDEXELEMENTSIZE_32BIT);
+                            const txb = sdl.SDL_GPUTextureSamplerBinding{
+                                .texture = bind_texture,
+                                .sampler = rr.ui_sampler,
+                            };
+                            sdl.SDL_BindGPUFragmentSamplers(pass, 0, &txb, 1);
+                            sdl.SDL_DrawGPUIndexedPrimitives(pass, @intCast(indices.items.len), 1, 0, 0, 0);
+                        }
+                    }
+                }
+            }
+        }
+
         sdl.SDL_EndGPURenderPass(pass);
         _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
     }
@@ -286,6 +562,58 @@ pub const RenderSystem = struct {
             ambient_ssbo = sdl.SDL_CreateGPUBuffer(device, &ssbo_info);
             ambient_size = 1024;
         }
+    }
+
+    fn uploadUIVertices(device: *sdl.SDL_GPUDevice, vertices: []const UIVertex) !*sdl.SDL_GPUBuffer {
+        const buffer_size: u32 = @intCast(@sizeOf(UIVertex) * vertices.len);
+
+        const transfer_info = sdl.SDL_GPUTransferBufferCreateInfo{
+            .size = buffer_size,
+            .usage = sdl.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+            .props = 0,
+        };
+
+        const transfer_buf = sdl.SDL_CreateGPUTransferBuffer(device, &transfer_info) orelse return error.TransferBufferFailed;
+        defer sdl.SDL_ReleaseGPUTransferBuffer(device, transfer_buf);
+
+        const data = sdl.SDL_MapGPUTransferBuffer(device, transfer_buf, false) orelse return error.MapFailed;
+
+        const vertices_bytes: []const u8 = std.mem.sliceAsBytes(vertices);
+        @memcpy(@as([*]u8, @ptrCast(data))[0..buffer_size], vertices_bytes);
+        sdl.SDL_UnmapGPUTransferBuffer(device, transfer_buf);
+
+        const buffer_info = sdl.SDL_GPUBufferCreateInfo{
+            .size = buffer_size,
+            .usage = sdl.SDL_GPU_BUFFERUSAGE_VERTEX,
+            .props = 0,
+        };
+
+        const buffer = sdl.SDL_CreateGPUBuffer(device, &buffer_info) orelse return error.BufferCreateFailed;
+
+        const cmd = sdl.SDL_AcquireGPUCommandBuffer(device) orelse {
+            sdl.SDL_ReleaseGPUBuffer(device, buffer);
+            return error.CommandBufferFailed;
+        };
+
+        const copy_pass = sdl.SDL_BeginGPUCopyPass(cmd) orelse {
+            _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
+            sdl.SDL_ReleaseGPUBuffer(device, buffer);
+            return error.CopyPassFailed;
+        };
+
+        sdl.SDL_UploadToGPUBuffer(copy_pass, &.{
+            .transfer_buffer = transfer_buf,
+            .offset = 0,
+        }, &.{
+            .buffer = buffer,
+            .offset = 0,
+            .size = buffer_size,
+        }, false);
+
+        sdl.SDL_EndGPUCopyPass(copy_pass);
+        _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
+
+        return buffer;
     }
 
     fn countComponents(world: anytype, comptime name: []const u8) u32 {

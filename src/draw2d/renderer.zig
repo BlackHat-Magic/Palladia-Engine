@@ -201,7 +201,7 @@ pub const Draw2DRenderer = struct {
             sdl.SDL_ReleaseGPUBuffer(device, entry.value_ptr.vertex_buffer);
             sdl.SDL_ReleaseGPUBuffer(device, entry.value_ptr.index_buffer);
         }
-        self.vertex_cache.deinit(self.allocator);
+        self.vertex_cache.deinit();
         self.text_cache.deinit(device);
     }
 
