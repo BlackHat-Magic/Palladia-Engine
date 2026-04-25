@@ -20,6 +20,11 @@ pub const components = struct {
     pub const PointLightComponent = @import("components/pointlight.zig").PointLightComponent;
     pub const PointLightContext = @import("components/pointlight.zig").Context;
     pub const GPUPointLight = @import("components/pointlight.zig").GPUPointLight;
+    pub const DrawCanvas = @import("components/draw2d.zig").DrawCanvas;
+    pub const DrawCommand = @import("components/draw2d.zig").DrawCommand;
+    pub const DrawRect = @import("components/draw2d.zig").DrawRect;
+    pub const DrawSprite = @import("components/draw2d.zig").DrawSprite;
+    pub const DrawText = @import("components/draw2d.zig").DrawText;
 };
 
 pub const resource = struct {
@@ -134,6 +139,18 @@ pub const material = struct {
     pub const ui_frag_spv = @import("material/ui.zig").ui_frag_spv;
 };
 
+pub const draw2d = struct {
+    pub const DrawCanvas = @import("components/draw2d.zig").DrawCanvas;
+    pub const DrawCommand = @import("components/draw2d.zig").DrawCommand;
+    pub const DrawRect = @import("components/draw2d.zig").DrawRect;
+    pub const DrawSprite = @import("components/draw2d.zig").DrawSprite;
+    pub const DrawText = @import("components/draw2d.zig").DrawText;
+    pub const TextureId = @import("components/draw2d.zig").TextureId;
+    pub const FontId = @import("components/draw2d.zig").FontId;
+    pub const TextureRegistry = @import("draw2d/registry.zig").TextureRegistry;
+    pub const FontRegistry = @import("draw2d/registry.zig").FontRegistry;
+};
+
 pub const app = struct {
     pub const App = @import("app.zig").build;
     pub const Plugin = @import("app.zig").Plugin;
@@ -160,6 +177,15 @@ pub const AmbientLightComponent = components.AmbientLightComponent;
 pub const AmbientLightContext = components.AmbientLightContext;
 pub const PointLightComponent = components.PointLightComponent;
 pub const PointLightContext = components.PointLightContext;
+pub const DrawCanvas = draw2d.DrawCanvas;
+pub const DrawCommand = draw2d.DrawCommand;
+pub const DrawRect = draw2d.DrawRect;
+pub const DrawSprite = draw2d.DrawSprite;
+pub const DrawText = draw2d.DrawText;
+pub const TextureId = draw2d.TextureId;
+pub const FontId = draw2d.FontId;
+pub const TextureRegistry = draw2d.TextureRegistry;
+pub const FontRegistry = draw2d.FontRegistry;
 
 test {
     std.testing.refAllDeclsRecursive(ecs);
@@ -172,4 +198,5 @@ test {
     std.testing.refAllDeclsRecursive(shader);
     std.testing.refAllDeclsRecursive(material);
     std.testing.refAllDeclsRecursive(app);
+    std.testing.refAllDeclsRecursive(draw2d);
 }
