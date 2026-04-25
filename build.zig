@@ -70,6 +70,9 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    exe.use_llvm = true;
+    exe.use_lld = true;
+
     b.installArtifact(exe);
 
     const run_step = b.step("run", "Run the app");
@@ -87,11 +90,17 @@ pub fn build(b: *std.Build) void {
         .root_module = mod,
     });
 
+    mod_tests.use_llvm = true;
+    mod_tests.use_lld = true;
+
     const run_mod_tests = b.addRunArtifact(mod_tests);
 
     const exe_tests = b.addTest(.{
         .root_module = exe.root_module,
     });
+
+    exe_tests.use_llvm = true;
+    exe_tests.use_lld = true;
 
     const run_exe_tests = b.addRunArtifact(exe_tests);
 
@@ -111,6 +120,9 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    demo_mesh.use_llvm = true;
+    demo_mesh.use_lld = true;
+
     const install_demo = b.addInstallArtifact(demo_mesh, .{});
     const demo_step = b.step("demo", "Build and run the demo_mesh example");
     demo_step.dependOn(&install_demo.step);
@@ -129,6 +141,9 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
+
+    stress_test.use_llvm = true;
+    stress_test.use_lld = true;
 
     const install_stress = b.addInstallArtifact(stress_test, .{});
     const stress_step = b.step("stress", "Build and run the stress_test example");
