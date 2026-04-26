@@ -1,7 +1,5 @@
 const std = @import("std");
 const sdl = @import("../sdl.zig").c;
-const draw2d = @import("../components/draw2d.zig");
-
 pub fn HandlePool(comptime T: type) type {
     return struct {
         const Id = u32;
