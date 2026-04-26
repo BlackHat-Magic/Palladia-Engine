@@ -21,7 +21,7 @@ void main() {
         if (vFilled < 0.5) {
             float inner_bt = min(vBorderThickness, min(vHalfSize.x, vHalfSize.y));
             float inner_cr = max(vCornerRadius - inner_bt, 0.0);
-            vec2 inner_d = abs(vLocalPos) - vHalfSize + inner_bt;
+            vec2 inner_d = abs(vLocalPos) - vHalfSize + inner_bt + inner_cr;
             float inner_dist = length(max(inner_d, 0.0)) + min(max(inner_d.x, inner_d.y), 0.0) - inner_cr;
             if (outer_dist > 0.0 || inner_dist < 0.0) discard;
         } else {
