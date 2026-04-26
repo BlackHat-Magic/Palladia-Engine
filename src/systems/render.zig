@@ -37,6 +37,7 @@ pub const RenderSystem = struct {
     var point_dirty: bool = true;
     var ambient_dirty: bool = true;
     var depth_format: sdl.SDL_GPUTextureFormat = sdl.SDL_GPU_TEXTUREFORMAT_D16_UNORM;
+    var swapchain_format: sdl.SDL_GPUTextureFormat = sdl.SDL_GPU_TEXTUREFORMAT_B8G8R8A8_UNORM;
     var draw2d_renderer: ?Draw2DRenderer = null;
     var ui_pipeline: ?*sdl.SDL_GPUGraphicsPipeline = null;
     var ui_vert_shader: ?*sdl.SDL_GPUShader = null;
@@ -51,10 +52,11 @@ pub const RenderSystem = struct {
         depth_format = common.getSupportedDepthFormat(device);
     }
 
-    pub fn initDraw2D(device: *sdl.SDL_GPUDevice, allocator: std.mem.Allocator, format: sdl.SDL_GPUTextureFormat) !void {
+    pub fn initDraw2D(device: *sdl.SDL_GPUDevice, window: *sdl.SDL_Window, allocator: std.mem.Allocator) !void {
         if (draw2d_renderer != null) return;
+        swapchain_format = sdl.SDL_GetGPUSwapchainTextureFormat(device, window);
         const ui_material = @import("../material/ui.zig");
-        const ui_mat = try ui_material.createUIMaterial(device, format, .{});
+        const ui_mat = try ui_material.createUIMaterial(device, swapchain_format, .{});
         ui_pipeline = ui_mat.pipeline;
         ui_vert_shader = ui_mat.vertex_shader;
         ui_frag_shader = ui_mat.fragment_shader;
@@ -294,12 +296,14 @@ pub const RenderSystem = struct {
                         z_index: f32,
                     };
 
-                    var canvas_list = std.ArrayList(CanvasEntry).initCapacity(alloc, 64);
+                    var canvas_list = std.ArrayList(CanvasEntry).initCapacity(alloc, 64) catch {
+                        return;
+                    };
                     var canvas_iter = world.iter("draw_canvas");
                     while (canvas_iter.next()) |entry| {
                         const canvas = world.get("draw_canvas", entry.entity) orelse continue;
                         if (canvas.commands.items.len == 0) continue;
-                        canvas_list.append(.{
+                        canvas_list.append(alloc, .{
                             .entity = entry.entity,
                             .z_index = canvas.z_index,
                         }) catch continue;
@@ -403,9 +407,9 @@ pub const RenderSystem = struct {
                                 _ = rr.vertex_cache.remove(@intCast(ce.entity));
                             }
 
-                            var vertices = std.ArrayList(UIVertex).initCapacity(alloc, 64);
+                            var vertices = std.ArrayList(UIVertex).initCapacity(alloc, 64) catch continue;
                             defer vertices.deinit(alloc);
-                            var indices = std.ArrayList(u32).initCapacity(alloc, 128);
+                            var indices = std.ArrayList(u32).initCapacity(alloc, 128) catch continue;
                             defer indices.deinit(alloc);
 
                             var bind_texture: *sdl.SDL_GPUTexture = rr.white_texture;
@@ -417,7 +421,7 @@ pub const RenderSystem = struct {
                                         const cy = offset_y + r.y + r.h / 2.0;
                                         const cr = @cos(r.rotation);
                                         const sr = @sin(r.rotation);
-                                        rr.emitQuad(
+                                        Draw2DRenderer.emitQuad(
                                             &vertices, &indices, alloc,
                                             offset_x + r.x, offset_y + r.y, r.w, r.h,
                                             cx, cy, cr, sr, r.w / 2.0, r.h / 2.0,
@@ -437,7 +441,7 @@ pub const RenderSystem = struct {
                                         const cy = offset_y + s.y + s.h / 2.0;
                                         const cr = @cos(s.rotation);
                                         const sr = @sin(s.rotation);
-                                        rr.emitQuad(
+                                        Draw2DRenderer.emitQuad(
                                             &vertices, &indices, alloc,
                                             offset_x + s.x, offset_y + s.y, s.w, s.h,
                                             cx, cy, cr, sr, s.w / 2.0, s.h / 2.0,
@@ -459,7 +463,7 @@ pub const RenderSystem = struct {
                                             const cy = offset_y + t.y + entry.h / 2.0;
                                             const cr = @cos(t.rotation);
                                             const sr = @sin(t.rotation);
-                                            rr.emitQuad(
+                                            Draw2DRenderer.emitQuad(
                                                 &vertices, &indices, alloc,
                                                 offset_x + t.x, offset_y + t.y, entry.w, entry.h,
                                                 cx, cy, cr, sr, entry.w / 2.0, entry.h / 2.0,

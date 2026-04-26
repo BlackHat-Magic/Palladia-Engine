@@ -115,7 +115,7 @@ pub const TextCache = struct {
         const texture = sdl.SDL_CreateGPUTexture(device, &tex_info) orelse return error.TextureCreateFailed;
 
         const tinfo = sdl.SDL_GPUTransferBufferCreateInfo{
-            .size = @intCast(surface.?.*.pitch * tex_h),
+            .size = @as(u32, @intCast(surface.?.*.pitch)) * tex_h,
             .usage = sdl.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
             .props = 0,
         };

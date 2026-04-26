@@ -4,11 +4,11 @@ pub const TextureId = u32;
 pub const FontId = u32;
 
 pub const DrawRect = struct {
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
-    color: [4]f32,
+    x: f32 = 0,
+    y: f32 = 0,
+    w: f32 = 0,
+    h: f32 = 0,
+    color: [4]f32 = .{ 0, 0, 0, 0 },
     texture_id: ?TextureId = null,
     filled: bool = true,
     border_thickness: f32 = 0,
@@ -17,13 +17,13 @@ pub const DrawRect = struct {
 };
 
 pub const DrawSprite = struct {
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
+    x: f32 = 0,
+    y: f32 = 0,
+    w: f32 = 0,
+    h: f32 = 0,
     texture_id: TextureId,
-    uv: [4]f32,
-    color: [4]f32,
+    uv: [4]f32 = .{ 0, 0, 1, 1 },
+    color: [4]f32 = .{ 0, 0, 0, 0 },
     filled: bool = true,
     border_thickness: f32 = 0,
     rotation: f32 = 0,
@@ -31,12 +31,12 @@ pub const DrawSprite = struct {
 };
 
 pub const DrawText = struct {
-    x: f32,
-    y: f32,
+    x: f32 = 0,
+    y: f32 = 0,
     text: []const u8,
-    font_id: FontId,
-    color: [4]f32,
-    scale: f32,
+    font_id: FontId = 0,
+    color: [4]f32 = .{ 0, 0, 0, 0 },
+    scale: f32 = 1,
     rotation: f32 = 0,
 };
 
