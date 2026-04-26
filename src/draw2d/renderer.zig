@@ -1,14 +1,8 @@
 const std = @import("std");
 const sdl = @import("../sdl.zig").c;
+const draw2d = @import("../components/draw2d.zig");
 
 const UIVertex = @import("../material/ui.zig").UIVertex;
-
-pub const CachedBuffers = struct {
-    command_hash: u64,
-    vertex_buffer: *sdl.SDL_GPUBuffer,
-    index_buffer: *sdl.SDL_GPUBuffer,
-    index_count: u32,
-};
 
 pub const TextCacheEntry = struct {
     texture: *sdl.SDL_GPUTexture,
@@ -178,11 +172,49 @@ pub const TextCache = struct {
 pub const Draw2DRenderer = struct {
     white_texture: *sdl.SDL_GPUTexture,
     ui_sampler: *sdl.SDL_GPUSampler,
-    vertex_cache: std.AutoHashMap(u32, CachedBuffers),
+    canvas_cache: std.AutoHashMap(u32, CanvasCache),
     text_cache: TextCache,
     allocator: std.mem.Allocator,
 
     const Self = @This();
+    pub const CHUNK_SIZE = 256;
+
+    pub const CommandChunk = struct {
+        start: u32,
+        count: u32,
+        vertex_buffer: *sdl.SDL_GPUBuffer,
+        index_buffer: *sdl.SDL_GPUBuffer,
+        index_count: u32,
+        texture: *sdl.SDL_GPUTexture,
+    };
+
+    pub const CanvasCache = struct {
+        chunks: std.ArrayList(CommandChunk),
+        allocator: std.mem.Allocator,
+
+        pub fn init(allocator: std.mem.Allocator) CanvasCache {
+            return .{
+                .chunks = std.ArrayList(CommandChunk).initCapacity(allocator, 16) catch @panic("OOM"),
+                .allocator = allocator,
+            };
+        }
+
+        pub fn deinit(self: *CanvasCache, device: *sdl.SDL_GPUDevice) void {
+            for (self.chunks.items) |chunk| {
+                sdl.SDL_ReleaseGPUBuffer(device, chunk.vertex_buffer);
+                sdl.SDL_ReleaseGPUBuffer(device, chunk.index_buffer);
+            }
+            self.chunks.deinit(self.allocator);
+        }
+
+        pub fn clear(self: *CanvasCache, device: *sdl.SDL_GPUDevice) void {
+            for (self.chunks.items) |chunk| {
+                sdl.SDL_ReleaseGPUBuffer(device, chunk.vertex_buffer);
+                sdl.SDL_ReleaseGPUBuffer(device, chunk.index_buffer);
+            }
+            self.chunks.clearRetainingCapacity();
+        }
+    };
 
     pub fn init(allocator: std.mem.Allocator, device: *sdl.SDL_GPUDevice) !Self {
         const common = @import("../material/common.zig");
@@ -191,7 +223,7 @@ pub const Draw2DRenderer = struct {
         return .{
             .white_texture = white,
             .ui_sampler = sampler,
-            .vertex_cache = std.AutoHashMap(u32, CachedBuffers).init(allocator),
+            .canvas_cache = std.AutoHashMap(u32, CanvasCache).init(allocator),
             .text_cache = TextCache.init(allocator),
             .allocator = allocator,
         };
@@ -200,13 +232,37 @@ pub const Draw2DRenderer = struct {
     pub fn deinit(self: *Self, device: *sdl.SDL_GPUDevice) void {
         sdl.SDL_ReleaseGPUTexture(device, self.white_texture);
         sdl.SDL_ReleaseGPUSampler(device, self.ui_sampler);
-        var iter = self.vertex_cache.iterator();
+        var iter = self.canvas_cache.iterator();
         while (iter.next()) |entry| {
-            sdl.SDL_ReleaseGPUBuffer(device, entry.value_ptr.vertex_buffer);
-            sdl.SDL_ReleaseGPUBuffer(device, entry.value_ptr.index_buffer);
+            entry.value_ptr.deinit(device);
         }
-        self.vertex_cache.deinit();
+        self.canvas_cache.deinit();
         self.text_cache.deinit(device);
+    }
+
+    pub fn buildChunks(
+        self: *Self,
+        device: *sdl.SDL_GPUDevice,
+        canvas: *const draw2d.DrawCanvas,
+        tex_reg: *const @import("registry.zig").TextureRegistry,
+        font_reg: *const @import("registry.zig").FontRegistry,
+        offset_x: f32,
+        offset_y: f32,
+        res_w: f32,
+        res_h: f32,
+    ) !void {
+        // Find or create cache entry for this entity
+        // (The caller must ensure the cache entry exists and is cleared if dirty)
+        _ = self;
+        _ = device;
+        _ = canvas;
+        _ = tex_reg;
+        _ = font_reg;
+        _ = offset_x;
+        _ = offset_y;
+        _ = res_w;
+        _ = res_h;
+        @panic("buildChunks should be inlined in RenderSystem, not called directly");
     }
 
     pub fn emitQuad(

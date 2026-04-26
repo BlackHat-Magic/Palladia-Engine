@@ -341,193 +341,159 @@ pub const RenderSystem = struct {
                             const offset_x: f32 = if (transform) |t| t.position[0] else 0;
                             const offset_y: f32 = if (transform) |t| t.position[1] else 0;
 
-                            var hasher = std.hash.Wyhash.init(0);
-                            for (canvas.commands.items) |dc| {
-                                switch (dc) {
-                                    .rect => |r| {
-                                        hasher.update(std.mem.asBytes(&r));
-                                    },
-                                    .sprite => |s| {
-                                        hasher.update(std.mem.asBytes(&s));
-                                    },
-                                    .text => |t| {
-                                        hasher.update(std.mem.asBytes(&t));
-                                        hasher.update(t.text);
-                                    },
-                                }
+                            // Get or create cache entry for this canvas
+                            const cache_gop = rr.canvas_cache.getOrPut(@intCast(ce.entity)) catch continue;
+                            if (!cache_gop.found_existing) {
+                                cache_gop.value_ptr.* = Draw2DRenderer.CanvasCache.init(rr.allocator);
                             }
-                            const cmd_hash = hasher.final();
+                            const cache = cache_gop.value_ptr;
 
-                            const cached_opt = rr.vertex_cache.getPtr(@intCast(ce.entity));
-                            if (cached_opt) |cached| {
-                                if (cached.command_hash == cmd_hash) {
-                                    var cached_tex: *sdl.SDL_GPUTexture = rr.white_texture;
-                                    for (canvas.commands.items) |dc2| {
-                                        switch (dc2) {
+                            // Rebuild chunks if dirty
+                            if (canvas.dirty) {
+                                cache.clear(res.device);
+
+                                var cmd_idx: u32 = 0;
+                                const total_cmds: u32 = @intCast(canvas.commands.items.len);
+                                const CHUNK_SIZE = Draw2DRenderer.CHUNK_SIZE;
+
+                                while (cmd_idx < total_cmds) {
+                                    const chunk_start = cmd_idx;
+                                    var chunk_texture: *sdl.SDL_GPUTexture = rr.white_texture;
+                                    var chunk_cmd_count: u32 = 0;
+
+                                    // Determine texture for first command in chunk
+                                    {
+                                        const first_cmd = canvas.commands.items[chunk_start];
+                                        chunk_texture = resolveTexture(first_cmd, rr, tex_reg, font_reg, res.device);
+                                    }
+
+                                    // Collect commands for this chunk (same texture, max CHUNK_SIZE)
+                                    while (cmd_idx < total_cmds and chunk_cmd_count < CHUNK_SIZE) {
+                                        const cur_cmd = canvas.commands.items[cmd_idx];
+                                        const cmd_tex = resolveTexture(cur_cmd, rr, tex_reg, font_reg, res.device);
+
+                                        if (chunk_cmd_count > 0 and cmd_tex != chunk_texture) {
+                                            break;
+                                        }
+
+                                        chunk_texture = cmd_tex;
+                                        chunk_cmd_count += 1;
+                                        cmd_idx += 1;
+                                    }
+
+                                    if (chunk_cmd_count == 0) continue;
+
+                                    // Build geometry for this chunk
+                                    var vert_fallback = std.heap.stackFallback(256 * @sizeOf(UIVertex), std.heap.page_allocator);
+                                    const vert_alloc = vert_fallback.get();
+                                    var vertices = std.ArrayList(UIVertex).initCapacity(vert_alloc, 256) catch continue;
+                                    defer vertices.deinit(vert_alloc);
+
+                                    var idx_fallback = std.heap.stackFallback(384 * @sizeOf(u32), std.heap.page_allocator);
+                                    const idx_alloc = idx_fallback.get();
+                                    var indices = std.ArrayList(u32).initCapacity(idx_alloc, 384) catch continue;
+                                    defer indices.deinit(idx_alloc);
+
+                                    var cmd_i = chunk_start;
+                                    while (cmd_i < chunk_start + chunk_cmd_count) : (cmd_i += 1) {
+                                        const dc3 = canvas.commands.items[cmd_i];
+                                        switch (dc3) {
                                             .rect => |r| {
-                                                if (r.texture_id) |tid| {
-                                                    if (tex_reg.get(tid)) |tex| { cached_tex = tex; break; }
-                                                }
+                                                const cx = offset_x + r.x + r.w / 2.0;
+                                                const cy = offset_y + r.y + r.h / 2.0;
+                                                const ccr = @cos(r.rotation);
+                                                const sr = @sin(r.rotation);
+                                                const filled: f32 = if (r.filled) 1.0 else 0.0;
+                                                const bt: f32 = if (!r.filled) @max(r.border_thickness, 0.0) else 0.0;
+                                                Draw2DRenderer.emitQuad(
+                                                    &vertices, &indices, vert_alloc,
+                                                    offset_x + r.x, offset_y + r.y, r.w, r.h,
+                                                    cx, cy, ccr, sr, r.w / 2.0, r.h / 2.0,
+                                                    r.corner_radius, bt, filled, r.color,
+                                                    res_w, res_h, 0, 0, 1, 1,
+                                                );
                                             },
                                             .sprite => |s| {
-                                                if (tex_reg.get(s.texture_id)) |tex| { cached_tex = tex; break; }
+                                                const cx = offset_x + s.x + s.w / 2.0;
+                                                const cy = offset_y + s.y + s.h / 2.0;
+                                                const ccr = @cos(s.rotation);
+                                                const sr = @sin(s.rotation);
+                                                const filled: f32 = if (s.filled) 1.0 else 0.0;
+                                                const bt: f32 = if (!s.filled) @max(s.border_thickness, 0.0) else 0.0;
+                                                Draw2DRenderer.emitQuad(
+                                                    &vertices, &indices, vert_alloc,
+                                                    offset_x + s.x, offset_y + s.y, s.w, s.h,
+                                                    cx, cy, ccr, sr, s.w / 2.0, s.h / 2.0,
+                                                    s.corner_radius, bt, filled, s.color,
+                                                    res_w, res_h, s.uv[0], s.uv[1], s.uv[2], s.uv[3],
+                                                );
                                             },
                                             .text => |t| {
                                                 if (font_reg.get(t.font_id)) |font| {
-                                                    const entry = rr.text_cache.getOrCreate(res.device, font, t.text, t.color, t.scale) catch continue;
-                                                    cached_tex = entry.texture;
-                                                    break;
+                                                    const entry = rr.text_cache.getOrCreate(
+                                                        res.device, font, t.text, t.color, t.scale,
+                                                    ) catch continue;
+                                                    const cx = offset_x + t.x + entry.w / 2.0;
+                                                    const cy = offset_y + t.y + entry.h / 2.0;
+                                                    const ccr = @cos(t.rotation);
+                                                    const sr = @sin(t.rotation);
+                                                    Draw2DRenderer.emitQuad(
+                                                        &vertices, &indices, vert_alloc,
+                                                        offset_x + t.x, offset_y + t.y, entry.w, entry.h,
+                                                        cx, cy, ccr, sr, entry.w / 2.0, entry.h / 2.0,
+                                                        0, 0, 1.0, t.color,
+                                                        res_w, res_h, 0, 0, 1, 1,
+                                                    );
                                                 }
                                             },
                                         }
                                     }
-                                    sdl.SDL_BindGPUGraphicsPipeline(pass, ui_pipeline.?);
-                                    const cvb = sdl.SDL_GPUBufferBinding{
-                                        .buffer = cached.vertex_buffer,
-                                        .offset = 0,
+
+                                    if (vertices.items.len == 0 or indices.items.len == 0) continue;
+
+                                    const vb = uploadUIVertices(res.device, vertices.items) catch continue;
+                                    const ib = uploadIndices(res.device, indices.items) catch {
+                                        sdl.SDL_ReleaseGPUBuffer(res.device, vb);
+                                        continue;
                                     };
-                                    sdl.SDL_BindGPUVertexBuffers(pass, 0, &cvb, 1);
-                                    const cib = sdl.SDL_GPUBufferBinding{
-                                        .buffer = cached.index_buffer,
-                                        .offset = 0,
+
+                                    cache.chunks.append(rr.allocator, .{
+                                        .start = chunk_start,
+                                        .count = chunk_cmd_count,
+                                        .vertex_buffer = vb,
+                                        .index_buffer = ib,
+                                        .index_count = @intCast(indices.items.len),
+                                        .texture = chunk_texture,
+                                    }) catch {
+                                        sdl.SDL_ReleaseGPUBuffer(res.device, vb);
+                                        sdl.SDL_ReleaseGPUBuffer(res.device, ib);
+                                        continue;
                                     };
-                                    sdl.SDL_BindGPUIndexBuffer(pass, &cib, sdl.SDL_GPU_INDEXELEMENTSIZE_32BIT);
-                                    const ctex = sdl.SDL_GPUTextureSamplerBinding{
-                                        .texture = cached_tex,
-                                        .sampler = rr.ui_sampler,
-                                    };
-                                    sdl.SDL_BindGPUFragmentSamplers(pass, 0, &ctex, 1);
-                                    sdl.SDL_DrawGPUIndexedPrimitives(pass, cached.index_count, 1, 0, 0, 0);
-                                    continue;
                                 }
-                                // Hash changed: release old buffers and remove stale entry
-                                sdl.SDL_ReleaseGPUBuffer(res.device, cached.vertex_buffer);
-                                sdl.SDL_ReleaseGPUBuffer(res.device, cached.index_buffer);
-                                _ = rr.vertex_cache.remove(@intCast(ce.entity));
+
+                                canvas.dirty = false;
                             }
 
-                            var vert_fallback = std.heap.stackFallback(256 * @sizeOf(UIVertex), std.heap.page_allocator);
-                            const vert_alloc = vert_fallback.get();
-                            var vertices = std.ArrayList(UIVertex).initCapacity(vert_alloc, 256) catch continue;
-                            defer vertices.deinit(vert_alloc);
-
-                            var idx_fallback = std.heap.stackFallback(384 * @sizeOf(u32), std.heap.page_allocator);
-                            const idx_alloc = idx_fallback.get();
-                            var indices = std.ArrayList(u32).initCapacity(idx_alloc, 384) catch continue;
-                            defer indices.deinit(idx_alloc);
-
-                            var bind_texture: *sdl.SDL_GPUTexture = rr.white_texture;
-
-                            for (canvas.commands.items) |dc3| {
-                                switch (dc3) {
-                                    .rect => |r| {
-                                        const cx = offset_x + r.x + r.w / 2.0;
-                                        const cy = offset_y + r.y + r.h / 2.0;
-                                        const cr = @cos(r.rotation);
-                                        const sr = @sin(r.rotation);
-                                        const filled: f32 = if (r.filled) 1.0 else 0.0;
-                                        const bt: f32 = if (!r.filled) @max(r.border_thickness, 0.0) else 0.0;
-                                        Draw2DRenderer.emitQuad(
-                                            &vertices, &indices, vert_alloc,
-                                            offset_x + r.x, offset_y + r.y, r.w, r.h,
-                                            cx, cy, cr, sr, r.w / 2.0, r.h / 2.0,
-                                            r.corner_radius,
-                                            bt,
-                                            filled,
-                                            r.color,
-                                            res_w, res_h,
-                                            0, 0, 1, 1,
-                                        );
-                                        if (r.texture_id) |tid| {
-                                            if (tex_reg.get(tid)) |tex| {
-                                                bind_texture = tex;
-                                            }
-                                        }
-                                    },
-                                    .sprite => |s| {
-                                        const cx = offset_x + s.x + s.w / 2.0;
-                                        const cy = offset_y + s.y + s.h / 2.0;
-                                        const cr = @cos(s.rotation);
-                                        const sr = @sin(s.rotation);
-                                        const filled: f32 = if (s.filled) 1.0 else 0.0;
-                                        const bt: f32 = if (!s.filled) @max(s.border_thickness, 0.0) else 0.0;
-                                        Draw2DRenderer.emitQuad(
-                                            &vertices, &indices, vert_alloc,
-                                            offset_x + s.x, offset_y + s.y, s.w, s.h,
-                                            cx, cy, cr, sr, s.w / 2.0, s.h / 2.0,
-                                            s.corner_radius,
-                                            bt,
-                                            filled,
-                                            s.color,
-                                            res_w, res_h,
-                                            s.uv[0], s.uv[1], s.uv[2], s.uv[3],
-                                        );
-                                        if (tex_reg.get(s.texture_id)) |tex| {
-                                            bind_texture = tex;
-                                        }
-                                    },
-                                    .text => |t| {
-                                        if (font_reg.get(t.font_id)) |font| {
-                                            const entry = rr.text_cache.getOrCreate(
-                                                res.device, font, t.text, t.color, t.scale,
-                                            ) catch continue;
-                                            const cx = offset_x + t.x + entry.w / 2.0;
-                                            const cy = offset_y + t.y + entry.h / 2.0;
-                                            const cr = @cos(t.rotation);
-                                            const sr = @sin(t.rotation);
-                                        Draw2DRenderer.emitQuad(
-                                            &vertices, &indices, vert_alloc,
-                                            offset_x + t.x, offset_y + t.y, entry.w, entry.h,
-                                            cx, cy, cr, sr, entry.w / 2.0, entry.h / 2.0,
-                                            0,
-                                            0,
-                                            1.0,
-                                            t.color,
-                                            res_w, res_h,
-                                            0, 0, 1, 1,
-                                        );
-                                            bind_texture = entry.texture;
-                                        }
-                                    },
-                                }
+                            // Draw all chunks
+                            for (cache.chunks.items) |chunk| {
+                                sdl.SDL_BindGPUGraphicsPipeline(pass, ui_pipeline.?);
+                                const cvb = sdl.SDL_GPUBufferBinding{
+                                    .buffer = chunk.vertex_buffer,
+                                    .offset = 0,
+                                };
+                                sdl.SDL_BindGPUVertexBuffers(pass, 0, &cvb, 1);
+                                const cib = sdl.SDL_GPUBufferBinding{
+                                    .buffer = chunk.index_buffer,
+                                    .offset = 0,
+                                };
+                                sdl.SDL_BindGPUIndexBuffer(pass, &cib, sdl.SDL_GPU_INDEXELEMENTSIZE_32BIT);
+                                const ctex = sdl.SDL_GPUTextureSamplerBinding{
+                                    .texture = chunk.texture,
+                                    .sampler = rr.ui_sampler,
+                                };
+                                sdl.SDL_BindGPUFragmentSamplers(pass, 0, &ctex, 1);
+                                sdl.SDL_DrawGPUIndexedPrimitives(pass, chunk.index_count, 1, 0, 0, 0);
                             }
-
-                            if (vertices.items.len == 0 or indices.items.len == 0) continue;
-
-                            const vb = uploadUIVertices(res.device, vertices.items) catch continue;
-                            const ib = uploadIndices(res.device, indices.items) catch {
-                                sdl.SDL_ReleaseGPUBuffer(res.device, vb);
-                                continue;
-                            };
-
-                            _ = rr.vertex_cache.put(@intCast(ce.entity), .{
-                                .command_hash = cmd_hash,
-                                .vertex_buffer = vb,
-                                .index_buffer = ib,
-                                .index_count = @intCast(indices.items.len),
-                            }) catch {
-                                sdl.SDL_ReleaseGPUBuffer(res.device, vb);
-                                sdl.SDL_ReleaseGPUBuffer(res.device, ib);
-                                continue;
-                            };
-
-                            sdl.SDL_BindGPUGraphicsPipeline(pass, ui_pipeline.?);
-                            const vxb = sdl.SDL_GPUBufferBinding{
-                                .buffer = vb,
-                                .offset = 0,
-                            };
-                            sdl.SDL_BindGPUVertexBuffers(pass, 0, &vxb, 1);
-                            const ixb = sdl.SDL_GPUBufferBinding{
-                                .buffer = ib,
-                                .offset = 0,
-                            };
-                            sdl.SDL_BindGPUIndexBuffer(pass, &ixb, sdl.SDL_GPU_INDEXELEMENTSIZE_32BIT);
-                            const txb = sdl.SDL_GPUTextureSamplerBinding{
-                                .texture = bind_texture,
-                                .sampler = rr.ui_sampler,
-                            };
-                            sdl.SDL_BindGPUFragmentSamplers(pass, 0, &txb, 1);
-                            sdl.SDL_DrawGPUIndexedPrimitives(pass, @intCast(indices.items.len), 1, 0, 0, 0);
                         }
                     }
                 }
@@ -641,5 +607,31 @@ pub const RenderSystem = struct {
             count += 1;
         }
         return count;
+    }
+
+    fn resolveTexture(
+        cmd: draw2d.DrawCommand,
+        rr: *Draw2DRenderer,
+        tex_reg: *const registry.TextureRegistry,
+        font_reg: *const registry.FontRegistry,
+        device: *sdl.SDL_GPUDevice,
+    ) *sdl.SDL_GPUTexture {
+        switch (cmd) {
+            .rect => |r| {
+                if (r.texture_id) |tid| {
+                    if (tex_reg.get(tid)) |tex| return tex;
+                }
+            },
+            .sprite => |s| {
+                if (tex_reg.get(s.texture_id)) |tex| return tex;
+            },
+            .text => |t| {
+                if (font_reg.get(t.font_id)) |font| {
+                    const entry = rr.text_cache.getOrCreate(device, font, t.text, t.color, t.scale) catch return rr.white_texture;
+                    return entry.texture;
+                }
+            },
+        }
+        return rr.white_texture;
     }
 };
