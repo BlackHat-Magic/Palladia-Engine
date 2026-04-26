@@ -348,38 +348,14 @@ pub const RenderSystem = struct {
                             for (canvas.commands.items) |dc| {
                                 switch (dc) {
                                     .rect => |r| {
-                                        hasher.update(std.mem.asBytes(&r.x));
-                                        hasher.update(std.mem.asBytes(&r.y));
-                                        hasher.update(std.mem.asBytes(&r.w));
-                                        hasher.update(std.mem.asBytes(&r.h));
-                                        hasher.update(std.mem.asBytes(&r.color));
-                                        hasher.update(std.mem.asBytes(&r.texture_id));
-                                        hasher.update(std.mem.asBytes(&r.filled));
-                                        hasher.update(std.mem.asBytes(&r.border_thickness));
-                                        hasher.update(std.mem.asBytes(&r.rotation));
-                                        hasher.update(std.mem.asBytes(&r.corner_radius));
+                                        hasher.update(std.mem.asBytes(&r));
                                     },
                                     .sprite => |s| {
-                                        hasher.update(std.mem.asBytes(&s.x));
-                                        hasher.update(std.mem.asBytes(&s.y));
-                                        hasher.update(std.mem.asBytes(&s.w));
-                                        hasher.update(std.mem.asBytes(&s.h));
-                                        hasher.update(std.mem.asBytes(&s.texture_id));
-                                        hasher.update(std.mem.asBytes(&s.uv));
-                                        hasher.update(std.mem.asBytes(&s.color));
-                                        hasher.update(std.mem.asBytes(&s.filled));
-                                        hasher.update(std.mem.asBytes(&s.border_thickness));
-                                        hasher.update(std.mem.asBytes(&s.rotation));
-                                        hasher.update(std.mem.asBytes(&s.corner_radius));
+                                        hasher.update(std.mem.asBytes(&s));
                                     },
                                     .text => |t| {
-                                        hasher.update(std.mem.asBytes(&t.x));
-                                        hasher.update(std.mem.asBytes(&t.y));
+                                        hasher.update(std.mem.asBytes(&t));
                                         hasher.update(t.text);
-                                        hasher.update(std.mem.asBytes(&t.font_id));
-                                        hasher.update(std.mem.asBytes(&t.color));
-                                        hasher.update(std.mem.asBytes(&t.scale));
-                                        hasher.update(std.mem.asBytes(&t.rotation));
                                     },
                                 }
                             }
