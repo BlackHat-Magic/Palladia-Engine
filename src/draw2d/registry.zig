@@ -8,9 +8,9 @@ pub fn HandlePool(comptime T: type) type {
         next_id: Id = 1,
 
         pub fn register(self: *@This(), allocator: std.mem.Allocator, value: T) !Id {
+            try self.items.append(allocator, value);
             const id = self.next_id;
             self.next_id += 1;
-            try self.items.append(allocator, value);
             return id;
         }
 
@@ -34,9 +34,14 @@ test "HandlePool basic operations" {
     const allocator = std.testing.allocator;
     var pool = HandlePool(u32){};
 
-    const id = try pool.register(allocator, 42);
-    try std.testing.expectEqual(@as(u32, 1), id);
-    try std.testing.expectEqual(@as(?u32, 42), pool.get(id));
+    const id1 = try pool.register(allocator, 42);
+    try std.testing.expectEqual(@as(u32, 1), id1);
+    try std.testing.expectEqual(@as(?u32, 42), pool.get(id1));
+
+    const id2 = try pool.register(allocator, 99);
+    try std.testing.expectEqual(@as(u32, 2), id2);
+    try std.testing.expectEqual(@as(?u32, 99), pool.get(id2));
+
     try std.testing.expectEqual(@as(?u32, null), pool.get(0));
     try std.testing.expectEqual(@as(?u32, null), pool.get(999));
 
