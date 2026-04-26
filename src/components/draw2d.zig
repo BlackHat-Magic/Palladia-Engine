@@ -58,9 +58,9 @@ pub const DrawCanvas = struct {
     /// Suppresses auto-dirty during bulk initialization.
     bulk_updating: bool = false,
 
-    pub fn init(allocator: std.mem.Allocator) DrawCanvas {
+    pub fn init(allocator: std.mem.Allocator) !DrawCanvas {
         return .{
-            .commands = std.ArrayList(DrawCommand).initCapacity(allocator, 64) catch @panic("OOM"),
+            .commands = try std.ArrayList(DrawCommand).initCapacity(allocator, 64),
             .allocator = allocator,
         };
     }
@@ -85,100 +85,27 @@ pub const DrawCanvas = struct {
         canvas.deinit();
     }
 
-    pub fn drawRect(self: *DrawCanvas, x: f32, y: f32, w: f32, h: f32, color: [4]f32) !void {
-        try self.commands.append(self.allocator, .{ .rect = .{
-            .x = x,
-            .y = y,
-            .w = w,
-            .h = h,
-            .color = color,
-        } });
-        if (!self.bulk_updating) self.dirty = true;
-    }
-
-    pub fn drawRectOpts(self: *DrawCanvas, x: f32, y: f32, w: f32, h: f32, color: [4]f32, opts: DrawRect) !void {
-        var r = opts;
-        r.x = x;
-        r.y = y;
-        r.w = w;
-        r.h = h;
-        r.color = color;
+    pub fn drawRect(self: *DrawCanvas, r: DrawRect) !void {
         try self.commands.append(self.allocator, .{ .rect = r });
         if (!self.bulk_updating) self.dirty = true;
     }
 
-    pub fn drawSprite(self: *DrawCanvas, x: f32, y: f32, w: f32, h: f32, texture_id: TextureId, uv: [4]f32, color: [4]f32) !void {
-        try self.commands.append(self.allocator, .{ .sprite = .{
-            .x = x,
-            .y = y,
-            .w = w,
-            .h = h,
-            .texture_id = texture_id,
-            .uv = uv,
-            .color = color,
-        } });
+    pub fn drawSprite(self: *DrawCanvas, s: DrawSprite) !void {
+        try self.commands.append(self.allocator, .{ .sprite = s });
         if (!self.bulk_updating) self.dirty = true;
     }
 
-    pub fn drawSpriteOpts(self: *DrawCanvas, x: f32, y: f32, w: f32, h: f32, texture_id: TextureId, uv: [4]f32, color: [4]f32, opts: struct {
-        filled: bool = true,
-        border_thickness: f32 = 0,
-        rotation: f32 = 0,
-        corner_radius: f32 = 0,
-    }) !void {
-        try self.commands.append(self.allocator, .{ .sprite = .{
-            .x = x,
-            .y = y,
-            .w = w,
-            .h = h,
-            .texture_id = texture_id,
-            .uv = uv,
-            .color = color,
-            .filled = opts.filled,
-            .border_thickness = opts.border_thickness,
-            .rotation = opts.rotation,
-            .corner_radius = opts.corner_radius,
-        } });
-        if (!self.bulk_updating) self.dirty = true;
-    }
-
-    pub fn drawText(self: *DrawCanvas, x: f32, y: f32, text: []const u8, font_id: FontId, color: [4]f32, scale: f32) !void {
-        const copy = try self.allocator.dupe(u8, text);
+    pub fn drawText(self: *DrawCanvas, t: DrawText) !void {
+        const copy = try self.allocator.dupe(u8, t.text);
         errdefer self.allocator.free(copy);
-        try self.commands.append(self.allocator, .{ .text = .{
-            .x = x,
-            .y = y,
-            .text = copy,
-            .font_id = font_id,
-            .color = color,
-            .scale = scale,
-            .owned = true,
-        } });
-        if (!self.bulk_updating) self.dirty = true;
-    }
-
-    pub fn drawTextRot(self: *DrawCanvas, x: f32, y: f32, text: []const u8, font_id: FontId, color: [4]f32, scale: f32, rotation: f32) !void {
-        const copy = try self.allocator.dupe(u8, text);
-        errdefer self.allocator.free(copy);
-        try self.commands.append(self.allocator, .{ .text = .{
-            .x = x,
-            .y = y,
-            .text = copy,
-            .font_id = font_id,
-            .color = color,
-            .scale = scale,
-            .rotation = rotation,
-            .owned = true,
-        } });
+        var tc = t;
+        tc.text = copy;
+        tc.owned = true;
+        try self.commands.append(self.allocator, .{ .text = tc });
         if (!self.bulk_updating) self.dirty = true;
     }
 
     pub fn clear(self: *DrawCanvas) void {
-        self.commands.clearRetainingCapacity();
-        self.dirty = true;
-    }
-
-    pub fn reset(self: *DrawCanvas) void {
         self.commands.clearRetainingCapacity();
         self.dirty = true;
     }
@@ -203,12 +130,12 @@ pub const DrawCanvas = struct {
 
 test "DrawCanvas basic operations" {
     const allocator = std.testing.allocator;
-    var canvas = DrawCanvas.init(allocator);
+    var canvas = try DrawCanvas.init(allocator);
     defer canvas.deinit();
 
-    try canvas.drawRect(10, 20, 100, 50, .{ 1, 0, 0, 1 });
-    try canvas.drawRect(30, 40, 60, 80, .{ 0, 1, 0, 0.5 });
-    try canvas.drawSprite(0, 0, 64, 64, 1, .{ 0, 0, 1, 1 }, .{ 1, 1, 1, 1 });
+    try canvas.drawRect(.{ .x = 10, .y = 20, .w = 100, .h = 50, .color = .{ 1, 0, 0, 1 } });
+    try canvas.drawRect(.{ .x = 30, .y = 40, .w = 60, .h = 80, .color = .{ 0, 1, 0, 0.5 } });
+    try canvas.drawSprite(.{ .x = 0, .y = 0, .w = 64, .h = 64, .texture_id = 1 });
 
     try std.testing.expectEqual(@as(usize, 3), canvas.commands.items.len);
 
@@ -218,7 +145,7 @@ test "DrawCanvas basic operations" {
 
 test "DrawCanvas z-index" {
     const allocator = std.testing.allocator;
-    var canvas = DrawCanvas.init(allocator);
+    var canvas = try DrawCanvas.init(allocator);
     defer canvas.deinit();
 
     try std.testing.expectEqual(@as(f32, 0), canvas.z_index);
@@ -228,18 +155,18 @@ test "DrawCanvas z-index" {
 
 test "DrawCanvas dirty flag" {
     const allocator = std.testing.allocator;
-    var canvas = DrawCanvas.init(allocator);
+    var canvas = try DrawCanvas.init(allocator);
     defer canvas.deinit();
 
     try std.testing.expect(canvas.dirty);
     canvas.dirty = false;
 
-    try canvas.drawRect(10, 20, 100, 50, .{ 1, 0, 0, 1 });
+    try canvas.drawRect(.{ .x = 10, .y = 20, .w = 100, .h = 50, .color = .{ 1, 0, 0, 1 } });
     try std.testing.expect(canvas.dirty);
 
     canvas.dirty = false;
     canvas.beginBulkUpdate();
-    try canvas.drawRect(20, 30, 50, 50, .{ 0, 1, 0, 1 });
+    try canvas.drawRect(.{ .x = 20, .y = 30, .w = 50, .h = 50, .color = .{ 0, 1, 0, 1 } });
     try std.testing.expect(!canvas.dirty);
     canvas.endBulkUpdate();
     try std.testing.expect(canvas.dirty);
@@ -247,11 +174,11 @@ test "DrawCanvas dirty flag" {
 
 test "DrawCanvas text ownership" {
     const allocator = std.testing.allocator;
-    var canvas = DrawCanvas.init(allocator);
+    var canvas = try DrawCanvas.init(allocator);
     defer canvas.deinit();
 
     const text = "Hello, World!";
-    try canvas.drawText(10, 20, text, 1, .{ 1, 1, 1, 1 }, 16);
+    try canvas.drawText(.{ .x = 10, .y = 20, .text = text, .font_id = 1, .color = .{ 1, 1, 1, 1 }, .scale = 16 });
 
     const cmd = canvas.commands.items[0];
     try std.testing.expectEqualStrings(text, cmd.text.text);
