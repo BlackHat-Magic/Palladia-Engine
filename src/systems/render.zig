@@ -333,9 +333,6 @@ pub const RenderSystem = struct {
                             }
                         }.lt);
 
-                        var vertices: [4096]UIVertex = undefined;
-                        var indices: [6144]u32 = undefined;
-
                         for (canvas_entries[0..canvas_count]) |ce| {
                             const canvas = world.get("draw_canvas", ce.entity) orelse continue;
                             if (canvas.commands.items.len == 0) continue;
@@ -409,8 +406,16 @@ pub const RenderSystem = struct {
                                 _ = rr.vertex_cache.remove(@intCast(ce.entity));
                             }
 
-                            var vertex_count: usize = 0;
-                            var index_count: usize = 0;
+                            var vert_fallback = std.heap.stackFallback(256 * @sizeOf(UIVertex), std.heap.page_allocator);
+                            const vert_alloc = vert_fallback.get();
+                            var vertices = std.ArrayList(UIVertex).initCapacity(vert_alloc, 256) catch continue;
+                            defer vertices.deinit(vert_alloc);
+
+                            var idx_fallback = std.heap.stackFallback(384 * @sizeOf(u32), std.heap.page_allocator);
+                            const idx_alloc = idx_fallback.get();
+                            var indices = std.ArrayList(u32).initCapacity(idx_alloc, 384) catch continue;
+                            defer indices.deinit(idx_alloc);
+
                             var bind_texture: *sdl.SDL_GPUTexture = rr.white_texture;
 
                             for (canvas.commands.items) |dc3| {
@@ -423,8 +428,7 @@ pub const RenderSystem = struct {
                                         const filled: f32 = if (r.filled) 1.0 else 0.0;
                                         const bt: f32 = if (!r.filled) @max(r.border_thickness, 0.0) else 0.0;
                                         Draw2DRenderer.emitQuad(
-                                            &vertices, &vertex_count,
-                                            &indices, &index_count,
+                                            &vertices, &indices, vert_alloc,
                                             offset_x + r.x, offset_y + r.y, r.w, r.h,
                                             cx, cy, cr, sr, r.w / 2.0, r.h / 2.0,
                                             r.corner_radius,
@@ -448,8 +452,7 @@ pub const RenderSystem = struct {
                                         const filled: f32 = if (s.filled) 1.0 else 0.0;
                                         const bt: f32 = if (!s.filled) @max(s.border_thickness, 0.0) else 0.0;
                                         Draw2DRenderer.emitQuad(
-                                            &vertices, &vertex_count,
-                                            &indices, &index_count,
+                                            &vertices, &indices, vert_alloc,
                                             offset_x + s.x, offset_y + s.y, s.w, s.h,
                                             cx, cy, cr, sr, s.w / 2.0, s.h / 2.0,
                                             s.corner_radius,
@@ -473,8 +476,7 @@ pub const RenderSystem = struct {
                                             const cr = @cos(t.rotation);
                                             const sr = @sin(t.rotation);
                                             Draw2DRenderer.emitQuad(
-                                                &vertices, &vertex_count,
-                                                &indices, &index_count,
+                                                &vertices, &indices, vert_alloc,
                                                 offset_x + t.x, offset_y + t.y, entry.w, entry.h,
                                                 cx, cy, cr, sr, entry.w / 2.0, entry.h / 2.0,
                                                 0,
@@ -490,10 +492,10 @@ pub const RenderSystem = struct {
                                 }
                             }
 
-                            if (vertex_count == 0 or index_count == 0) continue;
+                            if (vertices.items.len == 0 or indices.items.len == 0) continue;
 
-                            const vb = uploadUIVertices(res.device, vertices[0..vertex_count]) catch continue;
-                            const ib = uploadIndices(res.device, indices[0..index_count]) catch {
+                            const vb = uploadUIVertices(res.device, vertices.items) catch continue;
+                            const ib = uploadIndices(res.device, indices.items) catch {
                                 sdl.SDL_ReleaseGPUBuffer(res.device, vb);
                                 continue;
                             };
@@ -502,7 +504,7 @@ pub const RenderSystem = struct {
                                 .command_hash = cmd_hash,
                                 .vertex_buffer = vb,
                                 .index_buffer = ib,
-                                .index_count = @intCast(index_count),
+                                .index_count = @intCast(indices.items.len),
                             }) catch {
                                 sdl.SDL_ReleaseGPUBuffer(res.device, vb);
                                 sdl.SDL_ReleaseGPUBuffer(res.device, ib);
@@ -525,7 +527,7 @@ pub const RenderSystem = struct {
                                 .sampler = rr.ui_sampler,
                             };
                             sdl.SDL_BindGPUFragmentSamplers(pass, 0, &txb, 1);
-                            sdl.SDL_DrawGPUIndexedPrimitives(pass, @intCast(index_count), 1, 0, 0, 0);
+                            sdl.SDL_DrawGPUIndexedPrimitives(pass, @intCast(indices.items.len), 1, 0, 0, 0);
                         }
                     }
                 }

@@ -210,10 +210,9 @@ pub const Draw2DRenderer = struct {
     }
 
     pub fn emitQuad(
-        vertices: []UIVertex,
-        vertex_count: *usize,
-        indices: []u32,
-        index_count: *usize,
+        vertices: *std.ArrayList(UIVertex),
+        indices: *std.ArrayList(u32),
+        allocator: std.mem.Allocator,
         x: f32,
         y: f32,
         w: f32,
@@ -235,10 +234,9 @@ pub const Draw2DRenderer = struct {
         uv_max: f32,
         uv_max_v: f32,
     ) void {
-        if (vertex_count.* + 4 > vertices.len or index_count.* + 6 > indices.len) return;
         const res_arr = [2]f32{ res_w, res_h };
-        const start: u32 = @intCast(vertex_count.*);
-        vertices[vertex_count.*] = .{
+        const start: u32 = @intCast(vertices.items.len);
+        vertices.append(allocator, .{
             .position = .{ x, y },
             .res = res_arr,
             .color = color,
@@ -250,9 +248,8 @@ pub const Draw2DRenderer = struct {
             .corner_radius = corner_radius,
             .border_thickness = border_thickness,
             .filled = filled,
-        };
-        vertex_count.* += 1;
-        vertices[vertex_count.*] = .{
+        }) catch return;
+        vertices.append(allocator, .{
             .position = .{ x + w, y },
             .res = res_arr,
             .color = color,
@@ -264,9 +261,8 @@ pub const Draw2DRenderer = struct {
             .corner_radius = corner_radius,
             .border_thickness = border_thickness,
             .filled = filled,
-        };
-        vertex_count.* += 1;
-        vertices[vertex_count.*] = .{
+        }) catch return;
+        vertices.append(allocator, .{
             .position = .{ x, y + h },
             .res = res_arr,
             .color = color,
@@ -278,9 +274,8 @@ pub const Draw2DRenderer = struct {
             .corner_radius = corner_radius,
             .border_thickness = border_thickness,
             .filled = filled,
-        };
-        vertex_count.* += 1;
-        vertices[vertex_count.*] = .{
+        }) catch return;
+        vertices.append(allocator, .{
             .position = .{ x + w, y + h },
             .res = res_arr,
             .color = color,
@@ -292,14 +287,7 @@ pub const Draw2DRenderer = struct {
             .corner_radius = corner_radius,
             .border_thickness = border_thickness,
             .filled = filled,
-        };
-        vertex_count.* += 1;
-        indices[index_count.*] = start;
-        indices[index_count.* + 1] = start + 1;
-        indices[index_count.* + 2] = start + 2;
-        indices[index_count.* + 3] = start + 2;
-        indices[index_count.* + 4] = start + 1;
-        indices[index_count.* + 5] = start + 3;
-        index_count.* += 6;
+        }) catch return;
+        indices.appendSlice(allocator, &.{ start, start + 1, start + 2, start + 2, start + 1, start + 3 }) catch return;
     }
 };
