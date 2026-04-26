@@ -304,175 +304,231 @@ pub const RenderSystem = struct {
             if (res.texture_registry) |tex_reg| {
                 if (res.font_registry) |font_reg| {
                     var rr = &draw2d_renderer.?;
+                    const alloc = rr.allocator;
 
-                    const res_w: f32 = @floatFromInt(width);
-                    const res_h: f32 = @floatFromInt(height);
+                    block: {
+                        const res_w: f32 = @floatFromInt(width);
+                        const res_h: f32 = @floatFromInt(height);
 
-                    const CanvasEntry = struct {
-                        entity: Entity,
-                        z_index: f32,
-                    };
-
-                    var canvas_entries: [256]CanvasEntry = undefined;
-                    var canvas_count: usize = 0;
-                    var canvas_iter = world.iter("draw_canvas");
-                    while (canvas_iter.next()) |entry| {
-                        if (canvas_count >= canvas_entries.len) break;
-                        const canvas = world.get("draw_canvas", entry.entity) orelse continue;
-                        if (canvas.commands.items.len == 0) continue;
-                        canvas_entries[canvas_count] = .{
-                            .entity = entry.entity,
-                            .z_index = canvas.z_index,
+                        const CanvasEntry = struct {
+                            entity: Entity,
+                            z_index: f32,
                         };
-                        canvas_count += 1;
-                    }
 
-                    if (canvas_count > 0) {
-                        std.mem.sort(CanvasEntry, canvas_entries[0..canvas_count], {}, struct {
-                            fn lt(_: void, a: CanvasEntry, b: CanvasEntry) bool {
-                                return a.z_index < b.z_index;
-                            }
-                        }.lt);
+                        var canvas_entries = std.ArrayList(CanvasEntry).initCapacity(alloc, 16) catch break :block;
+                        defer canvas_entries.deinit(alloc);
 
-                        for (canvas_entries[0..canvas_count]) |ce| {
-                            const canvas = world.get("draw_canvas", ce.entity) orelse continue;
+                        var canvas_iter = world.iter("draw_canvas");
+                        while (canvas_iter.next()) |entry| {
+                            const canvas = world.get("draw_canvas", entry.entity) orelse continue;
                             if (canvas.commands.items.len == 0) continue;
+                            canvas_entries.append(rr.allocator, .{
+                                .entity = entry.entity,
+                                .z_index = canvas.z_index,
+                            }) catch continue;
+                        }
 
-                            const transform = world.get("transform", ce.entity);
-                            const offset_x: f32 = if (transform) |t| t.position[0] else 0;
-                            const offset_y: f32 = if (transform) |t| t.position[1] else 0;
+                        if (canvas_entries.items.len > 0) {
+                            std.mem.sort(CanvasEntry, canvas_entries.items, {}, struct {
+                                fn lt(_: void, a: CanvasEntry, b: CanvasEntry) bool {
+                                    return a.z_index < b.z_index;
+                                }
+                            }.lt);
 
-                            // Get or create cache entry for this canvas
-                            const cache_gop = rr.canvas_cache.getOrPut(@intCast(ce.entity)) catch continue;
-                            if (!cache_gop.found_existing) {
-                                cache_gop.value_ptr.* = Draw2DRenderer.CanvasCache.init(rr.allocator);
-                            }
-                            const cache = cache_gop.value_ptr;
+                            for (canvas_entries.items) |ce| {
+                                const canvas = world.get("draw_canvas", ce.entity) orelse continue;
+                                if (canvas.commands.items.len == 0) continue;
 
-                            // Rebuild chunks if dirty
-                            if (canvas.dirty) {
-                                cache.clear(res.device);
+                                const transform = world.get("transform", ce.entity);
+                                const offset_x: f32 = if (transform) |t| t.position[0] else 0;
+                                const offset_y: f32 = if (transform) |t| t.position[1] else 0;
 
-                                var cmd_idx: u32 = 0;
-                                const total_cmds: u32 = @intCast(canvas.commands.items.len);
-                                const CHUNK_SIZE = Draw2DRenderer.CHUNK_SIZE;
+                                const cache_gop = rr.canvas_cache.getOrPut(@intCast(ce.entity)) catch continue;
+                                if (!cache_gop.found_existing) {
+                                    cache_gop.value_ptr.* = Draw2DRenderer.CanvasCache.init(rr.allocator);
+                                }
+                                const cache = cache_gop.value_ptr;
 
-                                while (cmd_idx < total_cmds) {
-                                    const chunk_start = cmd_idx;
-                                    var chunk_texture: *sdl.SDL_GPUTexture = rr.white_texture;
-                                    var chunk_cmd_count: u32 = 0;
-
-                                    // Determine texture for first command in chunk
-                                    {
-                                        const first_cmd = canvas.commands.items[chunk_start];
-                                        chunk_texture = resolveTexture(first_cmd, rr, tex_reg, font_reg);
-                                    }
-
-                                    // Collect commands for this chunk (same texture, max CHUNK_SIZE)
-                                    while (cmd_idx < total_cmds and chunk_cmd_count < CHUNK_SIZE) {
-                                        const cur_cmd = canvas.commands.items[cmd_idx];
-                                        const cmd_tex = resolveTexture(cur_cmd, rr, tex_reg, font_reg);
-
-                                        if (chunk_cmd_count > 0 and cmd_tex != chunk_texture) {
-                                            break;
-                                        }
-
-                                        chunk_texture = cmd_tex;
-                                        chunk_cmd_count += 1;
-                                        cmd_idx += 1;
-                                    }
-
-                                    if (chunk_cmd_count == 0) continue;
-
-                                    // Build instance data for this chunk
-                                    var inst_fallback = std.heap.stackFallback(256 * @sizeOf(UIInstance), std.heap.page_allocator);
-                                    const inst_alloc = inst_fallback.get();
-                                    var instances = std.ArrayList(UIInstance).initCapacity(inst_alloc, 256) catch continue;
-                                    defer instances.deinit(inst_alloc);
-
-                                    var cmd_i = chunk_start;
-                                    while (cmd_i < chunk_start + chunk_cmd_count) : (cmd_i += 1) {
-                                        const dc3 = canvas.commands.items[cmd_i];
-                                        switch (dc3) {
-                                            .rect => |r| {
-                                                const filled: f32 = if (r.filled) 1.0 else 0.0;
-                                                const bt: f32 = if (!r.filled) @max(r.border_thickness, 0.0) else 0.0;
-                                                Draw2DRenderer.emitInstance(
-                                                    &instances, inst_alloc,
-                                                    offset_x + r.x, offset_y + r.y, r.w, r.h,
-                                                    r.rotation, r.corner_radius, bt, filled, r.color,
-                                                );
-                                            },
-                                            .sprite => |s| {
-                                                const filled: f32 = if (s.filled) 1.0 else 0.0;
-                                                const bt: f32 = if (!s.filled) @max(s.border_thickness, 0.0) else 0.0;
-                                                Draw2DRenderer.emitInstance(
-                                                    &instances, inst_alloc,
-                                                    offset_x + s.x, offset_y + s.y, s.w, s.h,
-                                                    s.rotation, s.corner_radius, bt, filled, s.color,
-                                                );
-                                            },
-                                            .text => |t| {
-                                                if (font_reg.get(t.font_id)) |font| {
-                                                    const entry = rr.text_cache.get(font, t.text, t.color, t.scale) orelse continue;
-                                                    Draw2DRenderer.emitInstance(
-                                                        &instances, inst_alloc,
-                                                        offset_x + t.x, offset_y + t.y, entry.w, entry.h,
-                                                        t.rotation, 0, 0, 1.0, t.color,
-                                                    );
-                                                }
-                                            },
-                                        }
-                                    }
-
-                                    if (instances.items.len == 0) continue;
-
-                                    const inst_buf = uploadInstances(res.device, instances.items) catch continue;
-
-                                    cache.chunks.append(rr.allocator, .{
-                                        .start = chunk_start,
-                                        .count = chunk_cmd_count,
-                                        .instance_buffer = inst_buf,
-                                        .instance_count = @intCast(instances.items.len),
-                                        .texture = chunk_texture,
-                                    }) catch {
-                                        sdl.SDL_ReleaseGPUBuffer(res.device, inst_buf);
+                                // Rebuild chunks if dirty
+                                if (canvas.dirty) {
+                                    var new_chunks = std.ArrayList(Draw2DRenderer.CommandChunk).initCapacity(rr.allocator, 16) catch {
+                                        cache.clear(res.device);
                                         continue;
                                     };
+
+                                    var build_failed = false;
+                                    var cmd_idx: u32 = 0;
+                                    const total_cmds: u32 = @intCast(canvas.commands.items.len);
+                                    const CHUNK_SIZE = Draw2DRenderer.CHUNK_SIZE;
+
+                                    while (cmd_idx < total_cmds and !build_failed) {
+                                        const start_idx = cmd_idx;
+                                        const chunk_tex = resolveTexture(canvas.commands.items[start_idx], rr, tex_reg, font_reg);
+
+                                        cmd_idx += 1;
+                                        var count: u32 = 1;
+                                        while (cmd_idx < total_cmds and count < CHUNK_SIZE) {
+                                            const cmd_tex = resolveTexture(canvas.commands.items[cmd_idx], rr, tex_reg, font_reg);
+                                            if (cmd_tex != chunk_tex) break;
+                                            count += 1;
+                                            cmd_idx += 1;
+                                        }
+
+                                        var instances = std.ArrayList(UIInstance).initCapacity(rr.allocator, count) catch {
+                                            build_failed = true;
+                                            break;
+                                        };
+                                        defer instances.deinit(rr.allocator);
+
+                                        var cmd_i = start_idx;
+                                        while (cmd_i < start_idx + count) : (cmd_i += 1) {
+                                            const dc3 = canvas.commands.items[cmd_i];
+                                            switch (dc3) {
+                                                .rect => |r| {
+                                                    const filled: f32 = if (r.filled) 1.0 else 0.0;
+                                                    const bt: f32 = if (!r.filled) @max(r.border_thickness, 0.0) else 0.0;
+                                                    Draw2DRenderer.emitInstance(
+                                                        &instances,
+                                                        rr.allocator,
+                                                        offset_x + r.x,
+                                                        offset_y + r.y,
+                                                        r.w,
+                                                        r.h,
+                                                        r.rotation,
+                                                        r.corner_radius,
+                                                        bt,
+                                                        filled,
+                                                        r.color,
+                                                        .{ 0, 0 },
+                                                        .{ 1, 1 },
+                                                    );
+                                                },
+                                                .sprite => |s| {
+                                                    const filled: f32 = if (s.filled) 1.0 else 0.0;
+                                                    const bt: f32 = if (!s.filled) @max(s.border_thickness, 0.0) else 0.0;
+                                                    Draw2DRenderer.emitInstance(
+                                                        &instances,
+                                                        rr.allocator,
+                                                        offset_x + s.x,
+                                                        offset_y + s.y,
+                                                        s.w,
+                                                        s.h,
+                                                        s.rotation,
+                                                        s.corner_radius,
+                                                        bt,
+                                                        filled,
+                                                        s.color,
+                                                        .{ s.uv[0], s.uv[1] },
+                                                        .{ s.uv[2], s.uv[3] },
+                                                    );
+                                                },
+                                                .text => |t| {
+                                                    if (font_reg.get(t.font_id)) |font| {
+                                                        const entry = rr.text_cache.get(font, t.text, t.color, t.scale) orelse continue;
+                                                        Draw2DRenderer.emitInstance(
+                                                            &instances,
+                                                            rr.allocator,
+                                                            offset_x + t.x,
+                                                            offset_y + t.y,
+                                                            entry.w,
+                                                            entry.h,
+                                                            t.rotation,
+                                                            0,
+                                                            0,
+                                                            1.0,
+                                                            t.color,
+                                                            .{ 0, 0 },
+                                                            .{ 1, 1 },
+                                                        );
+                                                    }
+                                                },
+                                            }
+                                        }
+
+                                        if (instances.items.len == 0) continue;
+
+                                        const inst_buf = uploadInstances(res.device, instances.items) catch {
+                                            build_failed = true;
+                                            break;
+                                        };
+
+                                        new_chunks.append(rr.allocator, .{
+                                            .instance_buffer = inst_buf,
+                                            .instance_count = @intCast(instances.items.len),
+                                            .texture = chunk_tex,
+                                        }) catch {
+                                            sdl.SDL_ReleaseGPUBuffer(res.device, inst_buf);
+                                            build_failed = true;
+                                            break;
+                                        };
+                                    }
+
+                                    if (!build_failed) {
+                                        cache.clear(res.device);
+                                        cache.chunks.deinit(rr.allocator);
+                                        cache.chunks = new_chunks;
+                                        canvas.dirty = false;
+                                    } else {
+                                        for (new_chunks.items) |nc| {
+                                            sdl.SDL_ReleaseGPUBuffer(res.device, nc.instance_buffer);
+                                        }
+                                        new_chunks.deinit(rr.allocator);
+                                    }
                                 }
 
-                                canvas.dirty = false;
+                                // Push resolution uniform once before drawing UI
+                                const UIUniform = extern struct {
+                                    res: [2]f32,
+                                };
+                                const ui_uniform = UIUniform{ .res = .{ res_w, res_h } };
+                                sdl.SDL_PushGPUVertexUniformData(cmd, 0, &ui_uniform, @sizeOf(UIUniform));
+
+                                // Draw all chunks
+                                for (cache.chunks.items) |chunk| {
+                                    sdl.SDL_BindGPUGraphicsPipeline(pass, ui_pipeline.?);
+
+                                    const vb_bindings = [_]sdl.SDL_GPUBufferBinding{
+                                        .{ .buffer = rr.quad_vertex_buffer, .offset = 0 },
+                                        .{ .buffer = chunk.instance_buffer, .offset = 0 },
+                                    };
+                                    sdl.SDL_BindGPUVertexBuffers(pass, 0, &vb_bindings, 2);
+
+                                    const cib = sdl.SDL_GPUBufferBinding{
+                                        .buffer = rr.quad_index_buffer,
+                                        .offset = 0,
+                                    };
+                                    sdl.SDL_BindGPUIndexBuffer(pass, &cib, sdl.SDL_GPU_INDEXELEMENTSIZE_32BIT);
+
+                                    const ctex = sdl.SDL_GPUTextureSamplerBinding{
+                                        .texture = chunk.texture,
+                                        .sampler = rr.ui_sampler,
+                                    };
+                                    sdl.SDL_BindGPUFragmentSamplers(pass, 0, &ctex, 1);
+                                    sdl.SDL_DrawGPUIndexedPrimitives(pass, 6, chunk.instance_count, 0, 0, 0);
+                                }
                             }
+                        }
+                    }
 
-                            // Push resolution uniform once before drawing UI
-                            const UIUniform = extern struct {
-                                res: [2]f32,
-                            };
-                            const ui_uniform = UIUniform{ .res = .{ res_w, res_h } };
-                            sdl.SDL_PushGPUVertexUniformData(cmd, 0, &ui_uniform, @sizeOf(UIUniform));
-
-                            // Draw all chunks
-                            for (cache.chunks.items) |chunk| {
-                                sdl.SDL_BindGPUGraphicsPipeline(pass, ui_pipeline.?);
-
-                                const vb_bindings = [_]sdl.SDL_GPUBufferBinding{
-                                    .{ .buffer = rr.quad_vertex_buffer, .offset = 0 },
-                                    .{ .buffer = chunk.instance_buffer, .offset = 0 },
-                                };
-                                sdl.SDL_BindGPUVertexBuffers(pass, 0, &vb_bindings, 2);
-
-                                const cib = sdl.SDL_GPUBufferBinding{
-                                    .buffer = rr.quad_index_buffer,
-                                    .offset = 0,
-                                };
-                                sdl.SDL_BindGPUIndexBuffer(pass, &cib, sdl.SDL_GPU_INDEXELEMENTSIZE_32BIT);
-
-                                const ctex = sdl.SDL_GPUTextureSamplerBinding{
-                                    .texture = chunk.texture,
-                                    .sampler = rr.ui_sampler,
-                                };
-                                sdl.SDL_BindGPUFragmentSamplers(pass, 0, &ctex, 1);
-                                sdl.SDL_DrawGPUIndexedPrimitives(pass, 6, chunk.instance_count, 0, 0, 0);
+                    // Clean up canvas_cache for entities that no longer exist
+                    {
+                        var dead: [64]u32 = undefined;
+                        var dead_count: usize = 0;
+                        var iter = rr.canvas_cache.iterator();
+                        while (iter.next()) |entry| {
+                            const eid: u32 = entry.key_ptr.*;
+                            const entity: Entity = @intCast(eid);
+                            if (world.get("draw_canvas", entity) == null) {
+                                if (dead_count < dead.len) {
+                                    dead[dead_count] = eid;
+                                    dead_count += 1;
+                                }
+                            }
+                        }
+                        for (dead[0..dead_count]) |eid| {
+                            if (rr.canvas_cache.getPtr(eid)) |ccp| {
+                                ccp.deinit(res.device);
+                                _ = rr.canvas_cache.remove(eid);
                             }
                         }
                     }

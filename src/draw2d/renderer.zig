@@ -168,10 +168,24 @@ pub const TextCache = struct {
         sdl.SDL_UnmapGPUTransferBuffer(device, transfer);
 
         const entry = TextCacheEntry{ .texture = texture, .w = @floatFromInt(tex_w), .h = @floatFromInt(tex_h) };
-        self.keys.append(self.allocator, key) catch return error.OutOfMemory;
-        self.entries.append(self.allocator, entry) catch return error.OutOfMemory;
-        self.access_counters.append(self.allocator, self.counter) catch return error.OutOfMemory;
-        self.counter += 1;
+        self.keys.append(self.allocator, key) catch {
+            sdl.SDL_ReleaseGPUTransferBuffer(device, transfer);
+            sdl.SDL_ReleaseGPUTexture(device, texture);
+            return error.OutOfMemory;
+        };
+        self.entries.append(self.allocator, entry) catch {
+            _ = self.keys.swapRemove(self.keys.items.len - 1);
+            sdl.SDL_ReleaseGPUTransferBuffer(device, transfer);
+            sdl.SDL_ReleaseGPUTexture(device, texture);
+            return error.OutOfMemory;
+        };
+        self.access_counters.append(self.allocator, self.counter) catch {
+            _ = self.entries.swapRemove(self.entries.items.len - 1);
+            _ = self.keys.swapRemove(self.keys.items.len - 1);
+            sdl.SDL_ReleaseGPUTransferBuffer(device, transfer);
+            sdl.SDL_ReleaseGPUTexture(device, texture);
+            return error.OutOfMemory;
+        };
 
         self.pending.append(self.allocator, .{
             .texture = texture,
@@ -179,9 +193,14 @@ pub const TextCache = struct {
             .w = tex_w,
             .h = tex_h,
         }) catch {
+            _ = self.access_counters.swapRemove(self.access_counters.items.len - 1);
+            _ = self.entries.swapRemove(self.entries.items.len - 1);
+            _ = self.keys.swapRemove(self.keys.items.len - 1);
             sdl.SDL_ReleaseGPUTransferBuffer(device, transfer);
+            sdl.SDL_ReleaseGPUTexture(device, texture);
             return error.OutOfMemory;
         };
+        self.counter += 1;
 
         return entry;
     }
@@ -237,8 +256,6 @@ pub const Draw2DRenderer = struct {
     pub const CHUNK_SIZE = 256;
 
     pub const CommandChunk = struct {
-        start: u32,
-        count: u32,
         instance_buffer: *sdl.SDL_GPUBuffer,
         instance_count: u32,
         texture: *sdl.SDL_GPUTexture,
@@ -304,31 +321,6 @@ pub const Draw2DRenderer = struct {
         self.text_cache.deinit(device);
     }
 
-    pub fn buildChunks(
-        self: *Self,
-        device: *sdl.SDL_GPUDevice,
-        canvas: *const draw2d.DrawCanvas,
-        tex_reg: *const @import("registry.zig").TextureRegistry,
-        font_reg: *const @import("registry.zig").FontRegistry,
-        offset_x: f32,
-        offset_y: f32,
-        res_w: f32,
-        res_h: f32,
-    ) !void {
-        // Find or create cache entry for this entity
-        // (The caller must ensure the cache entry exists and is cleared if dirty)
-        _ = self;
-        _ = device;
-        _ = canvas;
-        _ = tex_reg;
-        _ = font_reg;
-        _ = offset_x;
-        _ = offset_y;
-        _ = res_w;
-        _ = res_h;
-        @panic("buildChunks should be inlined in RenderSystem, not called directly");
-    }
-
     pub fn emitInstance(
         instances: *std.ArrayList(UIInstance),
         allocator: std.mem.Allocator,
@@ -341,6 +333,8 @@ pub const Draw2DRenderer = struct {
         border_thickness: f32,
         filled: f32,
         color: [4]f32,
+        uv_min: [2]f32,
+        uv_max: [2]f32,
     ) void {
         instances.append(allocator, .{
             .center = .{ x + w / 2.0, y + h / 2.0 },
@@ -351,6 +345,8 @@ pub const Draw2DRenderer = struct {
             .corner_radius = corner_radius,
             .border_thickness = border_thickness,
             .filled = filled,
+            .uv_min = uv_min,
+            .uv_max = uv_max,
         }) catch return;
     }
 };

@@ -1,16 +1,16 @@
 #version 450
 
 layout(location = 0) in vec2 offset;   // [-1,1] unit quad corner
-layout(location = 1) in vec2 uv_in;
-
-layout(location = 2) in vec2 center;
-layout(location = 3) in vec2 half_size;
-layout(location = 4) in float rot_cos;
-layout(location = 5) in float rot_sin;
-layout(location = 6) in vec4 color;
-layout(location = 7) in float corner_radius;
-layout(location = 8) in float border_thickness;
-layout(location = 9) in float filled;
+layout(location = 1) in vec2 center;
+layout(location = 2) in vec2 half_size;
+layout(location = 3) in float rot_cos;
+layout(location = 4) in float rot_sin;
+layout(location = 5) in vec4 color;
+layout(location = 6) in float corner_radius;
+layout(location = 7) in float border_thickness;
+layout(location = 8) in float filled;
+layout(location = 9) in vec2 uv_min;
+layout(location = 10) in vec2 uv_max;
 
 layout(std140, set = 1, binding = 0) uniform UIUniform {
     vec2 res;
@@ -36,7 +36,8 @@ void main() {
     gl_Position = vec4(x, y, 0.0, 1.0);
 
     vColor = color;
-    vUV = uv_in;
+    vec2 t = offset * 0.5 + 0.5;
+    vUV = uv_min + t * (uv_max - uv_min);
     vLocalPos = rel;
     vHalfSize = half_size;
     vCornerRadius = corner_radius;
