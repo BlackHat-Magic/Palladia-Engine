@@ -475,17 +475,17 @@ pub const RenderSystem = struct {
                                             const cy = offset_y + t.y + entry.h / 2.0;
                                             const cr = @cos(t.rotation);
                                             const sr = @sin(t.rotation);
-                                            Draw2DRenderer.emitQuad(
-                                                &vertices, &indices, vert_alloc,
-                                                offset_x + t.x, offset_y + t.y, entry.w, entry.h,
-                                                cx, cy, cr, sr, entry.w / 2.0, entry.h / 2.0,
-                                                0,
-                                                0,
-                                                1.0,
-                                                t.color,
-                                                res_w, res_h,
-                                                0, 0, 1, 1,
-                                            );
+                                        Draw2DRenderer.emitQuad(
+                                            &vertices, &indices, vert_alloc,
+                                            offset_x + t.x, offset_y + t.y, entry.w, entry.h,
+                                            cx, cy, cr, sr, entry.w / 2.0, entry.h / 2.0,
+                                            0,
+                                            0,
+                                            1.0,
+                                            t.color,
+                                            res_w, res_h,
+                                            0, 0, 1, 1,
+                                        );
                                             bind_texture = entry.texture;
                                         }
                                     },
