@@ -30,6 +30,8 @@ const ResourceDefs = struct {
     time: *Time,
     input: *Input,
     active_camera: *const palladia.system.ActiveCamera,
+    texture_registry: *palladia.TextureRegistry,
+    font_registry: *palladia.FontRegistry,
 };
 
 const Rotation = struct {

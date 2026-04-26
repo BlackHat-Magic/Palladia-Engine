@@ -155,6 +155,31 @@ pub fn build(b: *std.Build) void {
 
     const stress_build_step = b.step("stress-build", "Build the stress_test example without running");
     stress_build_step.dependOn(&install_stress.step);
+
+    const demo_2d = b.addExecutable(.{
+        .name = "demo_2d",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("examples/demo_2d/main.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "palladia", .module = mod },
+            },
+        }),
+    });
+
+    demo_2d.use_llvm = true;
+    demo_2d.use_lld = true;
+
+    const install_2d = b.addInstallArtifact(demo_2d, .{});
+    const demo_2d_step = b.step("demo-2d", "Build and run the 2D drawing demo");
+    demo_2d_step.dependOn(&install_2d.step);
+
+    const run_2d = b.addRunArtifact(demo_2d);
+    demo_2d_step.dependOn(&run_2d.step);
+
+    const demo_2d_build_step = b.step("demo-2d-build", "Build the 2D drawing demo without running");
+    demo_2d_build_step.dependOn(&install_2d.step);
 }
 
 pub const ShaderSpec = struct {
