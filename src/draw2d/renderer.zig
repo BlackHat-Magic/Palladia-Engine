@@ -14,10 +14,18 @@ pub const TextCacheKey = struct {
     hash: u64,
 };
 
+pub const PendingUpload = struct {
+    texture: *sdl.SDL_GPUTexture,
+    transfer: *sdl.SDL_GPUTransferBuffer,
+    w: u32,
+    h: u32,
+};
+
 pub const TextCache = struct {
     entries: std.ArrayList(TextCacheEntry),
     keys: std.ArrayList(TextCacheKey),
     access_counters: std.ArrayList(u64),
+    pending: std.ArrayList(PendingUpload),
     allocator: std.mem.Allocator,
     counter: u64 = 0,
 
@@ -28,17 +36,49 @@ pub const TextCache = struct {
             .entries = std.ArrayList(TextCacheEntry).initCapacity(allocator, MAX_ENTRIES) catch @panic("OOM"),
             .keys = std.ArrayList(TextCacheKey).initCapacity(allocator, MAX_ENTRIES) catch @panic("OOM"),
             .access_counters = std.ArrayList(u64).initCapacity(allocator, MAX_ENTRIES) catch @panic("OOM"),
+            .pending = std.ArrayList(PendingUpload).initCapacity(allocator, 64) catch @panic("OOM"),
             .allocator = allocator,
         };
     }
 
     pub fn deinit(self: *TextCache, device: *sdl.SDL_GPUDevice) void {
+        for (self.pending.items) |pu| {
+            sdl.SDL_ReleaseGPUTransferBuffer(device, pu.transfer);
+        }
+        self.pending.deinit(self.allocator);
         for (self.entries.items) |entry| {
             sdl.SDL_ReleaseGPUTexture(device, entry.texture);
         }
         self.entries.deinit(self.allocator);
         self.keys.deinit(self.allocator);
         self.access_counters.deinit(self.allocator);
+    }
+
+    fn computeKey(font: *sdl.TTF_Font, text: []const u8, color: [4]f32, scale: f32) TextCacheKey {
+        var hasher = std.hash.Wyhash.init(0);
+        hasher.update(std.mem.asBytes(&@intFromPtr(font)));
+        hasher.update(text);
+        hasher.update(std.mem.asBytes(&color));
+        hasher.update(std.mem.asBytes(&scale));
+        return TextCacheKey{ .hash = hasher.final() };
+    }
+
+    pub fn get(
+        self: *TextCache,
+        font: *sdl.TTF_Font,
+        text: []const u8,
+        color: [4]f32,
+        scale: f32,
+    ) ?TextCacheEntry {
+        const key = computeKey(font, text, color, scale);
+        for (self.keys.items, 0..) |k, i| {
+            if (k.hash == key.hash) {
+                self.access_counters.items[i] = self.counter;
+                self.counter += 1;
+                return self.entries.items[i];
+            }
+        }
+        return null;
     }
 
     pub fn getOrCreate(
@@ -49,12 +89,7 @@ pub const TextCache = struct {
         color: [4]f32,
         scale: f32,
     ) !TextCacheEntry {
-        var hasher = std.hash.Wyhash.init(0);
-        hasher.update(std.mem.asBytes(&@intFromPtr(font)));
-        hasher.update(text);
-        hasher.update(std.mem.asBytes(&color));
-        hasher.update(std.mem.asBytes(&scale));
-        const key = TextCacheKey{ .hash = hasher.final() };
+        const key = computeKey(font, text, color, scale);
 
         for (self.keys.items, 0..) |k, i| {
             if (k.hash == key.hash) {
@@ -121,43 +156,14 @@ pub const TextCache = struct {
             sdl.SDL_ReleaseGPUTexture(device, texture);
             return error.TransferBufferFailed;
         };
-        defer sdl.SDL_ReleaseGPUTransferBuffer(device, transfer);
 
         const data_ptr = sdl.SDL_MapGPUTransferBuffer(device, transfer, false) orelse {
+            sdl.SDL_ReleaseGPUTransferBuffer(device, transfer);
             sdl.SDL_ReleaseGPUTexture(device, texture);
             return error.MapFailed;
         };
         @memcpy(@as([*]u8, @ptrCast(data_ptr))[0..tinfo.size], @as([*]const u8, @ptrCast(converted.?.*.pixels))[0..tinfo.size]);
         sdl.SDL_UnmapGPUTransferBuffer(device, transfer);
-
-        const cmd = sdl.SDL_AcquireGPUCommandBuffer(device) orelse {
-            sdl.SDL_ReleaseGPUTexture(device, texture);
-            return error.CommandBufferFailed;
-        };
-        const copy_pass = sdl.SDL_BeginGPUCopyPass(cmd) orelse {
-            _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
-            sdl.SDL_ReleaseGPUTexture(device, texture);
-            return error.CopyPassFailed;
-        };
-
-        const src = sdl.SDL_GPUTextureTransferInfo{
-            .transfer_buffer = transfer,
-            .offset = 0,
-            .pixels_per_row = tex_w,
-            .rows_per_layer = tex_h,
-        };
-        const dst = sdl.SDL_GPUTextureRegion{
-            .texture = texture,
-            .w = tex_w,
-            .h = tex_h,
-            .d = 1,
-            .x = 0,
-            .y = 0,
-            .z = 0,
-        };
-        sdl.SDL_UploadToGPUTexture(copy_pass, &src, &dst, false);
-        sdl.SDL_EndGPUCopyPass(copy_pass);
-        _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
 
         const entry = TextCacheEntry{ .texture = texture, .w = @floatFromInt(tex_w), .h = @floatFromInt(tex_h) };
         self.keys.append(self.allocator, key) catch return error.OutOfMemory;
@@ -165,7 +171,54 @@ pub const TextCache = struct {
         self.access_counters.append(self.allocator, self.counter) catch return error.OutOfMemory;
         self.counter += 1;
 
+        self.pending.append(self.allocator, .{
+            .texture = texture,
+            .transfer = transfer,
+            .w = tex_w,
+            .h = tex_h,
+        }) catch {
+            sdl.SDL_ReleaseGPUTransferBuffer(device, transfer);
+            return error.OutOfMemory;
+        };
+
         return entry;
+    }
+
+    pub fn flushPendingUploads(self: *TextCache, device: *sdl.SDL_GPUDevice) !void {
+        if (self.pending.items.len == 0) return;
+
+        const cmd = sdl.SDL_AcquireGPUCommandBuffer(device) orelse return error.CommandBufferFailed;
+        const copy_pass = sdl.SDL_BeginGPUCopyPass(cmd) orelse {
+            _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
+            return error.CopyPassFailed;
+        };
+
+        for (self.pending.items) |pu| {
+            const src = sdl.SDL_GPUTextureTransferInfo{
+                .transfer_buffer = pu.transfer,
+                .offset = 0,
+                .pixels_per_row = pu.w,
+                .rows_per_layer = pu.h,
+            };
+            const dst = sdl.SDL_GPUTextureRegion{
+                .texture = pu.texture,
+                .w = pu.w,
+                .h = pu.h,
+                .d = 1,
+                .x = 0,
+                .y = 0,
+                .z = 0,
+            };
+            sdl.SDL_UploadToGPUTexture(copy_pass, &src, &dst, false);
+        }
+
+        sdl.SDL_EndGPUCopyPass(copy_pass);
+        _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
+
+        for (self.pending.items) |pu| {
+            sdl.SDL_ReleaseGPUTransferBuffer(device, pu.transfer);
+        }
+        self.pending.clearRetainingCapacity();
     }
 };
 

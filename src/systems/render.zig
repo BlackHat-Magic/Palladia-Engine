@@ -187,6 +187,7 @@ pub const RenderSystem = struct {
                         }
                     }
                 }
+                draw2d_renderer.?.text_cache.flushPendingUploads(res.device) catch {};
             }
         }
 
@@ -364,13 +365,13 @@ pub const RenderSystem = struct {
                                     // Determine texture for first command in chunk
                                     {
                                         const first_cmd = canvas.commands.items[chunk_start];
-                                        chunk_texture = resolveTexture(first_cmd, rr, tex_reg, font_reg, res.device);
+                                        chunk_texture = resolveTexture(first_cmd, rr, tex_reg, font_reg);
                                     }
 
                                     // Collect commands for this chunk (same texture, max CHUNK_SIZE)
                                     while (cmd_idx < total_cmds and chunk_cmd_count < CHUNK_SIZE) {
                                         const cur_cmd = canvas.commands.items[cmd_idx];
-                                        const cmd_tex = resolveTexture(cur_cmd, rr, tex_reg, font_reg, res.device);
+                                        const cmd_tex = resolveTexture(cur_cmd, rr, tex_reg, font_reg);
 
                                         if (chunk_cmd_count > 0 and cmd_tex != chunk_texture) {
                                             break;
@@ -430,9 +431,7 @@ pub const RenderSystem = struct {
                                             },
                                             .text => |t| {
                                                 if (font_reg.get(t.font_id)) |font| {
-                                                    const entry = rr.text_cache.getOrCreate(
-                                                        res.device, font, t.text, t.color, t.scale,
-                                                    ) catch continue;
+                                                    const entry = rr.text_cache.get(font, t.text, t.color, t.scale) orelse continue;
                                                     const cx = offset_x + t.x + entry.w / 2.0;
                                                     const cy = offset_y + t.y + entry.h / 2.0;
                                                     const ccr = @cos(t.rotation);
@@ -614,7 +613,6 @@ pub const RenderSystem = struct {
         rr: *Draw2DRenderer,
         tex_reg: *const registry.TextureRegistry,
         font_reg: *const registry.FontRegistry,
-        device: *sdl.SDL_GPUDevice,
     ) *sdl.SDL_GPUTexture {
         switch (cmd) {
             .rect => |r| {
@@ -627,7 +625,7 @@ pub const RenderSystem = struct {
             },
             .text => |t| {
                 if (font_reg.get(t.font_id)) |font| {
-                    const entry = rr.text_cache.getOrCreate(device, font, t.text, t.color, t.scale) catch return rr.white_texture;
+                    const entry = rr.text_cache.get(font, t.text, t.color, t.scale) orelse return rr.white_texture;
                     return entry.texture;
                 }
             },
