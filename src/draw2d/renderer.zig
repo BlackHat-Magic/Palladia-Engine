@@ -98,8 +98,12 @@ pub const TextCache = struct {
         if (surface == null) return error.TextRenderFailed;
         defer sdl.SDL_DestroySurface(surface);
 
-        const tex_w: u32 = @intCast(surface.?.*.w);
-        const tex_h: u32 = @intCast(surface.?.*.h);
+        const converted = sdl.SDL_ConvertSurface(surface, sdl.SDL_PIXELFORMAT_ABGR8888);
+        if (converted == null) return error.TextRenderFailed;
+        defer sdl.SDL_DestroySurface(converted);
+
+        const tex_w: u32 = @intCast(converted.?.*.w);
+        const tex_h: u32 = @intCast(converted.?.*.h);
 
         const tex_info = sdl.SDL_GPUTextureCreateInfo{
             .type = sdl.SDL_GPU_TEXTURETYPE_2D,
@@ -115,7 +119,7 @@ pub const TextCache = struct {
         const texture = sdl.SDL_CreateGPUTexture(device, &tex_info) orelse return error.TextureCreateFailed;
 
         const tinfo = sdl.SDL_GPUTransferBufferCreateInfo{
-            .size = @as(u32, @intCast(surface.?.*.pitch)) * tex_h,
+            .size = @as(u32, @intCast(converted.?.*.pitch)) * tex_h,
             .usage = sdl.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
             .props = 0,
         };
@@ -129,7 +133,7 @@ pub const TextCache = struct {
             sdl.SDL_ReleaseGPUTexture(device, texture);
             return error.MapFailed;
         };
-        @memcpy(@as([*]u8, @ptrCast(data_ptr))[0..tinfo.size], @as([*]const u8, @ptrCast(surface.?.*.pixels))[0..tinfo.size]);
+        @memcpy(@as([*]u8, @ptrCast(data_ptr))[0..tinfo.size], @as([*]const u8, @ptrCast(converted.?.*.pixels))[0..tinfo.size]);
         sdl.SDL_UnmapGPUTransferBuffer(device, transfer);
 
         const cmd = sdl.SDL_AcquireGPUCommandBuffer(device) orelse {
@@ -220,6 +224,8 @@ pub const Draw2DRenderer = struct {
         half_w: f32,
         half_h: f32,
         corner_radius: f32,
+        border_thickness: f32,
+        filled: f32,
         color: [4]f32,
         res_w: f32,
         res_h: f32,
@@ -240,6 +246,8 @@ pub const Draw2DRenderer = struct {
             .rot_sin = sr,
             .half_size = .{ half_w, half_h },
             .corner_radius = corner_radius,
+            .border_thickness = border_thickness,
+            .filled = filled,
         }) catch return;
         vertices.append(allocator, .{
             .position = .{ x + w, y },
@@ -251,6 +259,8 @@ pub const Draw2DRenderer = struct {
             .rot_sin = sr,
             .half_size = .{ half_w, half_h },
             .corner_radius = corner_radius,
+            .border_thickness = border_thickness,
+            .filled = filled,
         }) catch return;
         vertices.append(allocator, .{
             .position = .{ x, y + h },
@@ -262,6 +272,8 @@ pub const Draw2DRenderer = struct {
             .rot_sin = sr,
             .half_size = .{ half_w, half_h },
             .corner_radius = corner_radius,
+            .border_thickness = border_thickness,
+            .filled = filled,
         }) catch return;
         vertices.append(allocator, .{
             .position = .{ x + w, y + h },
@@ -273,6 +285,8 @@ pub const Draw2DRenderer = struct {
             .rot_sin = sr,
             .half_size = .{ half_w, half_h },
             .corner_radius = corner_radius,
+            .border_thickness = border_thickness,
+            .filled = filled,
         }) catch return;
         indices.appendSlice(allocator, &.{ start, start + 1, start + 2, start + 2, start + 1, start + 3 }) catch return;
     }

@@ -443,40 +443,23 @@ pub const RenderSystem = struct {
                             for (canvas.commands.items) |dc3| {
                                 switch (dc3) {
                                     .rect => |r| {
-                                        const th = if (!r.filled) @max(r.border_thickness, 0.0) else 0.0;
-                                        if (r.filled or th <= 0) {
-                                            const cx = offset_x + r.x + r.w / 2.0;
-                                            const cy = offset_y + r.y + r.h / 2.0;
-                                            const cr = @cos(r.rotation);
-                                            const sr = @sin(r.rotation);
-                                            Draw2DRenderer.emitQuad(
-                                                &vertices, &indices, alloc,
-                                                offset_x + r.x, offset_y + r.y, r.w, r.h,
-                                                cx, cy, cr, sr, r.w / 2.0, r.h / 2.0,
-                                                r.corner_radius,
-                                                r.color,
-                                                res_w, res_h,
-                                                0, 0, 1, 1,
-                                            );
-                                        } else {
-                                            const bt = @min(th, @min(r.w / 2.0, r.h / 2.0));
-                                            const x0 = offset_x + r.x;
-                                            const y0 = offset_y + r.y;
-                                            const cx = x0 + r.w / 2.0;
-                                            const cy = y0 + r.h / 2.0;
-                                            const cr = @cos(r.rotation);
-                                            const sr = @sin(r.rotation);
-                                            // Top edge
-                                            Draw2DRenderer.emitQuad(&vertices, &indices, alloc, x0, y0, r.w, bt, cx, cy, cr, sr, r.w / 2.0, bt / 2.0, r.corner_radius, r.color, res_w, res_h, 0, 0, 1, 1);
-                                            // Bottom edge
-                                            Draw2DRenderer.emitQuad(&vertices, &indices, alloc, x0, y0 + r.h - bt, r.w, bt, cx, cy, cr, sr, r.w / 2.0, bt / 2.0, r.corner_radius, r.color, res_w, res_h, 0, 0, 1, 1);
-                                            if (r.h > 2 * bt) {
-                                                // Left edge
-                                                Draw2DRenderer.emitQuad(&vertices, &indices, alloc, x0, y0 + bt, bt, r.h - 2 * bt, cx, cy, cr, sr, bt / 2.0, (r.h - 2 * bt) / 2.0, r.corner_radius, r.color, res_w, res_h, 0, 0, 1, 1);
-                                                // Right edge
-                                                Draw2DRenderer.emitQuad(&vertices, &indices, alloc, x0 + r.w - bt, y0 + bt, bt, r.h - 2 * bt, cx, cy, cr, sr, bt / 2.0, (r.h - 2 * bt) / 2.0, r.corner_radius, r.color, res_w, res_h, 0, 0, 1, 1);
-                                            }
-                                        }
+                                        const cx = offset_x + r.x + r.w / 2.0;
+                                        const cy = offset_y + r.y + r.h / 2.0;
+                                        const cr = @cos(r.rotation);
+                                        const sr = @sin(r.rotation);
+                                        const filled: f32 = if (r.filled) 1.0 else 0.0;
+                                        const bt: f32 = if (!r.filled) @max(r.border_thickness, 0.0) else 0.0;
+                                        Draw2DRenderer.emitQuad(
+                                            &vertices, &indices, alloc,
+                                            offset_x + r.x, offset_y + r.y, r.w, r.h,
+                                            cx, cy, cr, sr, r.w / 2.0, r.h / 2.0,
+                                            r.corner_radius,
+                                            bt,
+                                            filled,
+                                            r.color,
+                                            res_w, res_h,
+                                            0, 0, 1, 1,
+                                        );
                                         if (r.texture_id) |tid| {
                                             if (tex_reg.get(tid)) |tex| {
                                                 bind_texture = tex;
@@ -484,40 +467,23 @@ pub const RenderSystem = struct {
                                         }
                                     },
                                     .sprite => |s| {
-                                        const th = if (!s.filled) @max(s.border_thickness, 0.0) else 0.0;
-                                        if (s.filled or th <= 0) {
-                                            const cx = offset_x + s.x + s.w / 2.0;
-                                            const cy = offset_y + s.y + s.h / 2.0;
-                                            const cr = @cos(s.rotation);
-                                            const sr = @sin(s.rotation);
-                                            Draw2DRenderer.emitQuad(
-                                                &vertices, &indices, alloc,
-                                                offset_x + s.x, offset_y + s.y, s.w, s.h,
-                                                cx, cy, cr, sr, s.w / 2.0, s.h / 2.0,
-                                                s.corner_radius,
-                                                s.color,
-                                                res_w, res_h,
-                                                s.uv[0], s.uv[1], s.uv[2], s.uv[3],
-                                            );
-                                        } else {
-                                            const bt = @min(th, @min(s.w / 2.0, s.h / 2.0));
-                                            const x0 = offset_x + s.x;
-                                            const y0 = offset_y + s.y;
-                                            const cx = x0 + s.w / 2.0;
-                                            const cy = y0 + s.h / 2.0;
-                                            const cr = @cos(s.rotation);
-                                            const sr = @sin(s.rotation);
-                                            // Top edge
-                                            Draw2DRenderer.emitQuad(&vertices, &indices, alloc, x0, y0, s.w, bt, cx, cy, cr, sr, s.w / 2.0, bt / 2.0, s.corner_radius, s.color, res_w, res_h, s.uv[0], s.uv[1], s.uv[2], s.uv[3]);
-                                            // Bottom edge
-                                            Draw2DRenderer.emitQuad(&vertices, &indices, alloc, x0, y0 + s.h - bt, s.w, bt, cx, cy, cr, sr, s.w / 2.0, bt / 2.0, s.corner_radius, s.color, res_w, res_h, s.uv[0], s.uv[1], s.uv[2], s.uv[3]);
-                                            if (s.h > 2 * bt) {
-                                                // Left edge
-                                                Draw2DRenderer.emitQuad(&vertices, &indices, alloc, x0, y0 + bt, bt, s.h - 2 * bt, cx, cy, cr, sr, bt / 2.0, (s.h - 2 * bt) / 2.0, s.corner_radius, s.color, res_w, res_h, s.uv[0], s.uv[1], s.uv[2], s.uv[3]);
-                                                // Right edge
-                                                Draw2DRenderer.emitQuad(&vertices, &indices, alloc, x0 + s.w - bt, y0 + bt, bt, s.h - 2 * bt, cx, cy, cr, sr, bt / 2.0, (s.h - 2 * bt) / 2.0, s.corner_radius, s.color, res_w, res_h, s.uv[0], s.uv[1], s.uv[2], s.uv[3]);
-                                            }
-                                        }
+                                        const cx = offset_x + s.x + s.w / 2.0;
+                                        const cy = offset_y + s.y + s.h / 2.0;
+                                        const cr = @cos(s.rotation);
+                                        const sr = @sin(s.rotation);
+                                        const filled: f32 = if (s.filled) 1.0 else 0.0;
+                                        const bt: f32 = if (!s.filled) @max(s.border_thickness, 0.0) else 0.0;
+                                        Draw2DRenderer.emitQuad(
+                                            &vertices, &indices, alloc,
+                                            offset_x + s.x, offset_y + s.y, s.w, s.h,
+                                            cx, cy, cr, sr, s.w / 2.0, s.h / 2.0,
+                                            s.corner_radius,
+                                            bt,
+                                            filled,
+                                            s.color,
+                                            res_w, res_h,
+                                            s.uv[0], s.uv[1], s.uv[2], s.uv[3],
+                                        );
                                         if (tex_reg.get(s.texture_id)) |tex| {
                                             bind_texture = tex;
                                         }
@@ -536,6 +502,8 @@ pub const RenderSystem = struct {
                                                 offset_x + t.x, offset_y + t.y, entry.w, entry.h,
                                                 cx, cy, cr, sr, entry.w / 2.0, entry.h / 2.0,
                                                 0,
+                                                0,
+                                                1.0,
                                                 t.color,
                                                 res_w, res_h,
                                                 0, 0, 1, 1,

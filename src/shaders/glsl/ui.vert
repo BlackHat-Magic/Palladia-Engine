@@ -9,12 +9,16 @@ layout(location = 5) in float rot_cos;
 layout(location = 6) in float rot_sin;
 layout(location = 7) in vec2 half_size;
 layout(location = 8) in float corner_radius;
+layout(location = 9) in float border_thickness;
+layout(location = 10) in float filled;
 
 layout(location = 0) out vec4 vColor;
 layout(location = 1) out vec2 vUV;
 layout(location = 2) out vec2 vLocalPos;
 layout(location = 3) out vec2 vHalfSize;
 layout(location = 4) out float vCornerRadius;
+layout(location = 5) out float vBorderThickness;
+layout(location = 6) out float vFilled;
 
 void main() {
     vec2 rel = position - center;
@@ -32,4 +36,6 @@ void main() {
     vLocalPos = rel;
     vHalfSize = half_size;
     vCornerRadius = corner_radius;
+    vBorderThickness = border_thickness;
+    vFilled = filled;
 }
