@@ -2,7 +2,9 @@ const std = @import("std");
 const sdl = @import("../sdl.zig").c;
 const draw2d = @import("../components/draw2d.zig");
 
-const UIVertex = @import("../material/ui.zig").UIVertex;
+const ui_material = @import("../material/ui.zig");
+const UIVertex = ui_material.UIVertex;
+const UIInstance = ui_material.UIInstance;
 
 pub const TextCacheEntry = struct {
     texture: *sdl.SDL_GPUTexture,
@@ -225,6 +227,8 @@ pub const TextCache = struct {
 pub const Draw2DRenderer = struct {
     white_texture: *sdl.SDL_GPUTexture,
     ui_sampler: *sdl.SDL_GPUSampler,
+    quad_vertex_buffer: *sdl.SDL_GPUBuffer,
+    quad_index_buffer: *sdl.SDL_GPUBuffer,
     canvas_cache: std.AutoHashMap(u32, CanvasCache),
     text_cache: TextCache,
     allocator: std.mem.Allocator,
@@ -235,9 +239,8 @@ pub const Draw2DRenderer = struct {
     pub const CommandChunk = struct {
         start: u32,
         count: u32,
-        vertex_buffer: *sdl.SDL_GPUBuffer,
-        index_buffer: *sdl.SDL_GPUBuffer,
-        index_count: u32,
+        instance_buffer: *sdl.SDL_GPUBuffer,
+        instance_count: u32,
         texture: *sdl.SDL_GPUTexture,
     };
 
@@ -254,16 +257,14 @@ pub const Draw2DRenderer = struct {
 
         pub fn deinit(self: *CanvasCache, device: *sdl.SDL_GPUDevice) void {
             for (self.chunks.items) |chunk| {
-                sdl.SDL_ReleaseGPUBuffer(device, chunk.vertex_buffer);
-                sdl.SDL_ReleaseGPUBuffer(device, chunk.index_buffer);
+                sdl.SDL_ReleaseGPUBuffer(device, chunk.instance_buffer);
             }
             self.chunks.deinit(self.allocator);
         }
 
         pub fn clear(self: *CanvasCache, device: *sdl.SDL_GPUDevice) void {
             for (self.chunks.items) |chunk| {
-                sdl.SDL_ReleaseGPUBuffer(device, chunk.vertex_buffer);
-                sdl.SDL_ReleaseGPUBuffer(device, chunk.index_buffer);
+                sdl.SDL_ReleaseGPUBuffer(device, chunk.instance_buffer);
             }
             self.chunks.clearRetainingCapacity();
         }
@@ -273,9 +274,17 @@ pub const Draw2DRenderer = struct {
         const common = @import("../material/common.zig");
         const white = try common.createWhiteTexture(device);
         const sampler = try common.createDefaultSampler(device);
+
+        const quad_vb = try uploadStaticQuadVertices(device);
+        errdefer sdl.SDL_ReleaseGPUBuffer(device, quad_vb);
+        const quad_ib = try uploadStaticQuadIndices(device);
+        errdefer sdl.SDL_ReleaseGPUBuffer(device, quad_ib);
+
         return .{
             .white_texture = white,
             .ui_sampler = sampler,
+            .quad_vertex_buffer = quad_vb,
+            .quad_index_buffer = quad_ib,
             .canvas_cache = std.AutoHashMap(u32, CanvasCache).init(allocator),
             .text_cache = TextCache.init(allocator),
             .allocator = allocator,
@@ -285,6 +294,8 @@ pub const Draw2DRenderer = struct {
     pub fn deinit(self: *Self, device: *sdl.SDL_GPUDevice) void {
         sdl.SDL_ReleaseGPUTexture(device, self.white_texture);
         sdl.SDL_ReleaseGPUSampler(device, self.ui_sampler);
+        sdl.SDL_ReleaseGPUBuffer(device, self.quad_vertex_buffer);
+        sdl.SDL_ReleaseGPUBuffer(device, self.quad_index_buffer);
         var iter = self.canvas_cache.iterator();
         while (iter.next()) |entry| {
             entry.value_ptr.deinit(device);
@@ -318,85 +329,126 @@ pub const Draw2DRenderer = struct {
         @panic("buildChunks should be inlined in RenderSystem, not called directly");
     }
 
-    pub fn emitQuad(
-        vertices: *std.ArrayList(UIVertex),
-        indices: *std.ArrayList(u32),
+    pub fn emitInstance(
+        instances: *std.ArrayList(UIInstance),
         allocator: std.mem.Allocator,
         x: f32,
         y: f32,
         w: f32,
         h: f32,
-        cx: f32,
-        cy: f32,
-        cr: f32,
-        sr: f32,
-        half_w: f32,
-        half_h: f32,
+        rotation: f32,
         corner_radius: f32,
         border_thickness: f32,
         filled: f32,
         color: [4]f32,
-        res_w: f32,
-        res_h: f32,
-        uv_min: f32,
-        uv_min_v: f32,
-        uv_max: f32,
-        uv_max_v: f32,
     ) void {
-        const res_arr = [2]f32{ res_w, res_h };
-        const start: u32 = @intCast(vertices.items.len);
-        vertices.append(allocator, .{
-            .position = .{ x, y },
-            .res = res_arr,
+        instances.append(allocator, .{
+            .center = .{ x + w / 2.0, y + h / 2.0 },
+            .half_size = .{ w / 2.0, h / 2.0 },
+            .rot_cos = @cos(rotation),
+            .rot_sin = @sin(rotation),
             .color = color,
-            .uv = .{ uv_min, uv_min_v },
-            .center = .{ cx, cy },
-            .rot_cos = cr,
-            .rot_sin = sr,
-            .half_size = .{ half_w, half_h },
             .corner_radius = corner_radius,
             .border_thickness = border_thickness,
             .filled = filled,
         }) catch return;
-        vertices.append(allocator, .{
-            .position = .{ x + w, y },
-            .res = res_arr,
-            .color = color,
-            .uv = .{ uv_max, uv_min_v },
-            .center = .{ cx, cy },
-            .rot_cos = cr,
-            .rot_sin = sr,
-            .half_size = .{ half_w, half_h },
-            .corner_radius = corner_radius,
-            .border_thickness = border_thickness,
-            .filled = filled,
-        }) catch return;
-        vertices.append(allocator, .{
-            .position = .{ x, y + h },
-            .res = res_arr,
-            .color = color,
-            .uv = .{ uv_min, uv_max_v },
-            .center = .{ cx, cy },
-            .rot_cos = cr,
-            .rot_sin = sr,
-            .half_size = .{ half_w, half_h },
-            .corner_radius = corner_radius,
-            .border_thickness = border_thickness,
-            .filled = filled,
-        }) catch return;
-        vertices.append(allocator, .{
-            .position = .{ x + w, y + h },
-            .res = res_arr,
-            .color = color,
-            .uv = .{ uv_max, uv_max_v },
-            .center = .{ cx, cy },
-            .rot_cos = cr,
-            .rot_sin = sr,
-            .half_size = .{ half_w, half_h },
-            .corner_radius = corner_radius,
-            .border_thickness = border_thickness,
-            .filled = filled,
-        }) catch return;
-        indices.appendSlice(allocator, &.{ start, start + 1, start + 2, start + 2, start + 1, start + 3 }) catch return;
     }
 };
+
+fn uploadStaticQuadVertices(device: *sdl.SDL_GPUDevice) !*sdl.SDL_GPUBuffer {
+    const vertices = ui_material.QUAD_VERTICES;
+    const buffer_size: u32 = @intCast(@sizeOf(UIVertex) * vertices.len);
+
+    const transfer_info = sdl.SDL_GPUTransferBufferCreateInfo{
+        .size = buffer_size,
+        .usage = sdl.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+        .props = 0,
+    };
+    const transfer_buf = sdl.SDL_CreateGPUTransferBuffer(device, &transfer_info) orelse return error.TransferBufferFailed;
+    defer sdl.SDL_ReleaseGPUTransferBuffer(device, transfer_buf);
+
+    const data = sdl.SDL_MapGPUTransferBuffer(device, transfer_buf, false) orelse return error.MapFailed;
+    const vertices_bytes: []const u8 = std.mem.sliceAsBytes(&vertices);
+    @memcpy(@as([*]u8, @ptrCast(data))[0..buffer_size], vertices_bytes);
+    sdl.SDL_UnmapGPUTransferBuffer(device, transfer_buf);
+
+    const buffer_info = sdl.SDL_GPUBufferCreateInfo{
+        .size = buffer_size,
+        .usage = sdl.SDL_GPU_BUFFERUSAGE_VERTEX,
+        .props = 0,
+    };
+    const buffer = sdl.SDL_CreateGPUBuffer(device, &buffer_info) orelse return error.BufferCreateFailed;
+
+    const cmd = sdl.SDL_AcquireGPUCommandBuffer(device) orelse {
+        sdl.SDL_ReleaseGPUBuffer(device, buffer);
+        return error.CommandBufferFailed;
+    };
+    const copy_pass = sdl.SDL_BeginGPUCopyPass(cmd) orelse {
+        _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
+        sdl.SDL_ReleaseGPUBuffer(device, buffer);
+        return error.CopyPassFailed;
+    };
+
+    sdl.SDL_UploadToGPUBuffer(copy_pass, &.{
+        .transfer_buffer = transfer_buf,
+        .offset = 0,
+    }, &.{
+        .buffer = buffer,
+        .offset = 0,
+        .size = buffer_size,
+    }, false);
+
+    sdl.SDL_EndGPUCopyPass(copy_pass);
+    _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
+
+    return buffer;
+}
+
+fn uploadStaticQuadIndices(device: *sdl.SDL_GPUDevice) !*sdl.SDL_GPUBuffer {
+    const indices = ui_material.QUAD_INDICES;
+    const buffer_size: u32 = @intCast(@sizeOf(u32) * indices.len);
+
+    const transfer_info = sdl.SDL_GPUTransferBufferCreateInfo{
+        .size = buffer_size,
+        .usage = sdl.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+        .props = 0,
+    };
+    const transfer_buf = sdl.SDL_CreateGPUTransferBuffer(device, &transfer_info) orelse return error.TransferBufferFailed;
+    defer sdl.SDL_ReleaseGPUTransferBuffer(device, transfer_buf);
+
+    const data = sdl.SDL_MapGPUTransferBuffer(device, transfer_buf, false) orelse return error.MapFailed;
+    const indices_bytes: []const u8 = std.mem.sliceAsBytes(&indices);
+    @memcpy(@as([*]u8, @ptrCast(data))[0..buffer_size], indices_bytes);
+    sdl.SDL_UnmapGPUTransferBuffer(device, transfer_buf);
+
+    const buffer_info = sdl.SDL_GPUBufferCreateInfo{
+        .size = buffer_size,
+        .usage = sdl.SDL_GPU_BUFFERUSAGE_INDEX,
+        .props = 0,
+    };
+    const buffer = sdl.SDL_CreateGPUBuffer(device, &buffer_info) orelse return error.BufferCreateFailed;
+
+    const cmd = sdl.SDL_AcquireGPUCommandBuffer(device) orelse {
+        sdl.SDL_ReleaseGPUBuffer(device, buffer);
+        return error.CommandBufferFailed;
+    };
+    const copy_pass = sdl.SDL_BeginGPUCopyPass(cmd) orelse {
+        _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
+        sdl.SDL_ReleaseGPUBuffer(device, buffer);
+        return error.CopyPassFailed;
+    };
+
+    sdl.SDL_UploadToGPUBuffer(copy_pass, &.{
+        .transfer_buffer = transfer_buf,
+        .offset = 0,
+    }, &.{
+        .buffer = buffer,
+        .offset = 0,
+        .size = buffer_size,
+    }, false);
+
+    sdl.SDL_EndGPUCopyPass(copy_pass);
+    _ = sdl.SDL_SubmitGPUCommandBuffer(cmd);
+
+    return buffer;
+}

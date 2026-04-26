@@ -12,7 +12,7 @@ const MaterialComponent = @import("../components/material.zig").MaterialComponen
 const pointlight = @import("../components/pointlight.zig");
 const ambientlight = @import("../components/ambientlight.zig");
 const Draw2DRenderer = @import("../draw2d/renderer.zig").Draw2DRenderer;
-const UIVertex = @import("../material/ui.zig").UIVertex;
+const UIInstance = @import("../material/ui.zig").UIInstance;
 const draw2d = @import("../components/draw2d.zig");
 const registry = @import("../draw2d/registry.zig");
 
@@ -384,88 +384,59 @@ pub const RenderSystem = struct {
 
                                     if (chunk_cmd_count == 0) continue;
 
-                                    // Build geometry for this chunk
-                                    var vert_fallback = std.heap.stackFallback(256 * @sizeOf(UIVertex), std.heap.page_allocator);
-                                    const vert_alloc = vert_fallback.get();
-                                    var vertices = std.ArrayList(UIVertex).initCapacity(vert_alloc, 256) catch continue;
-                                    defer vertices.deinit(vert_alloc);
-
-                                    var idx_fallback = std.heap.stackFallback(384 * @sizeOf(u32), std.heap.page_allocator);
-                                    const idx_alloc = idx_fallback.get();
-                                    var indices = std.ArrayList(u32).initCapacity(idx_alloc, 384) catch continue;
-                                    defer indices.deinit(idx_alloc);
+                                    // Build instance data for this chunk
+                                    var inst_fallback = std.heap.stackFallback(256 * @sizeOf(UIInstance), std.heap.page_allocator);
+                                    const inst_alloc = inst_fallback.get();
+                                    var instances = std.ArrayList(UIInstance).initCapacity(inst_alloc, 256) catch continue;
+                                    defer instances.deinit(inst_alloc);
 
                                     var cmd_i = chunk_start;
                                     while (cmd_i < chunk_start + chunk_cmd_count) : (cmd_i += 1) {
                                         const dc3 = canvas.commands.items[cmd_i];
                                         switch (dc3) {
                                             .rect => |r| {
-                                                const cx = offset_x + r.x + r.w / 2.0;
-                                                const cy = offset_y + r.y + r.h / 2.0;
-                                                const ccr = @cos(r.rotation);
-                                                const sr = @sin(r.rotation);
                                                 const filled: f32 = if (r.filled) 1.0 else 0.0;
                                                 const bt: f32 = if (!r.filled) @max(r.border_thickness, 0.0) else 0.0;
-                                                Draw2DRenderer.emitQuad(
-                                                    &vertices, &indices, vert_alloc,
+                                                Draw2DRenderer.emitInstance(
+                                                    &instances, inst_alloc,
                                                     offset_x + r.x, offset_y + r.y, r.w, r.h,
-                                                    cx, cy, ccr, sr, r.w / 2.0, r.h / 2.0,
-                                                    r.corner_radius, bt, filled, r.color,
-                                                    res_w, res_h, 0, 0, 1, 1,
+                                                    r.rotation, r.corner_radius, bt, filled, r.color,
                                                 );
                                             },
                                             .sprite => |s| {
-                                                const cx = offset_x + s.x + s.w / 2.0;
-                                                const cy = offset_y + s.y + s.h / 2.0;
-                                                const ccr = @cos(s.rotation);
-                                                const sr = @sin(s.rotation);
                                                 const filled: f32 = if (s.filled) 1.0 else 0.0;
                                                 const bt: f32 = if (!s.filled) @max(s.border_thickness, 0.0) else 0.0;
-                                                Draw2DRenderer.emitQuad(
-                                                    &vertices, &indices, vert_alloc,
+                                                Draw2DRenderer.emitInstance(
+                                                    &instances, inst_alloc,
                                                     offset_x + s.x, offset_y + s.y, s.w, s.h,
-                                                    cx, cy, ccr, sr, s.w / 2.0, s.h / 2.0,
-                                                    s.corner_radius, bt, filled, s.color,
-                                                    res_w, res_h, s.uv[0], s.uv[1], s.uv[2], s.uv[3],
+                                                    s.rotation, s.corner_radius, bt, filled, s.color,
                                                 );
                                             },
                                             .text => |t| {
                                                 if (font_reg.get(t.font_id)) |font| {
                                                     const entry = rr.text_cache.get(font, t.text, t.color, t.scale) orelse continue;
-                                                    const cx = offset_x + t.x + entry.w / 2.0;
-                                                    const cy = offset_y + t.y + entry.h / 2.0;
-                                                    const ccr = @cos(t.rotation);
-                                                    const sr = @sin(t.rotation);
-                                                    Draw2DRenderer.emitQuad(
-                                                        &vertices, &indices, vert_alloc,
+                                                    Draw2DRenderer.emitInstance(
+                                                        &instances, inst_alloc,
                                                         offset_x + t.x, offset_y + t.y, entry.w, entry.h,
-                                                        cx, cy, ccr, sr, entry.w / 2.0, entry.h / 2.0,
-                                                        0, 0, 1.0, t.color,
-                                                        res_w, res_h, 0, 0, 1, 1,
+                                                        t.rotation, 0, 0, 1.0, t.color,
                                                     );
                                                 }
                                             },
                                         }
                                     }
 
-                                    if (vertices.items.len == 0 or indices.items.len == 0) continue;
+                                    if (instances.items.len == 0) continue;
 
-                                    const vb = uploadUIVertices(res.device, vertices.items) catch continue;
-                                    const ib = uploadIndices(res.device, indices.items) catch {
-                                        sdl.SDL_ReleaseGPUBuffer(res.device, vb);
-                                        continue;
-                                    };
+                                    const inst_buf = uploadInstances(res.device, instances.items) catch continue;
 
                                     cache.chunks.append(rr.allocator, .{
                                         .start = chunk_start,
                                         .count = chunk_cmd_count,
-                                        .vertex_buffer = vb,
-                                        .index_buffer = ib,
-                                        .index_count = @intCast(indices.items.len),
+                                        .instance_buffer = inst_buf,
+                                        .instance_count = @intCast(instances.items.len),
                                         .texture = chunk_texture,
                                     }) catch {
-                                        sdl.SDL_ReleaseGPUBuffer(res.device, vb);
-                                        sdl.SDL_ReleaseGPUBuffer(res.device, ib);
+                                        sdl.SDL_ReleaseGPUBuffer(res.device, inst_buf);
                                         continue;
                                     };
                                 }
@@ -473,25 +444,35 @@ pub const RenderSystem = struct {
                                 canvas.dirty = false;
                             }
 
+                            // Push resolution uniform once before drawing UI
+                            const UIUniform = extern struct {
+                                res: [2]f32,
+                            };
+                            const ui_uniform = UIUniform{ .res = .{ res_w, res_h } };
+                            sdl.SDL_PushGPUVertexUniformData(cmd, 0, &ui_uniform, @sizeOf(UIUniform));
+
                             // Draw all chunks
                             for (cache.chunks.items) |chunk| {
                                 sdl.SDL_BindGPUGraphicsPipeline(pass, ui_pipeline.?);
-                                const cvb = sdl.SDL_GPUBufferBinding{
-                                    .buffer = chunk.vertex_buffer,
-                                    .offset = 0,
+
+                                const vb_bindings = [_]sdl.SDL_GPUBufferBinding{
+                                    .{ .buffer = rr.quad_vertex_buffer, .offset = 0 },
+                                    .{ .buffer = chunk.instance_buffer, .offset = 0 },
                                 };
-                                sdl.SDL_BindGPUVertexBuffers(pass, 0, &cvb, 1);
+                                sdl.SDL_BindGPUVertexBuffers(pass, 0, &vb_bindings, 2);
+
                                 const cib = sdl.SDL_GPUBufferBinding{
-                                    .buffer = chunk.index_buffer,
+                                    .buffer = rr.quad_index_buffer,
                                     .offset = 0,
                                 };
                                 sdl.SDL_BindGPUIndexBuffer(pass, &cib, sdl.SDL_GPU_INDEXELEMENTSIZE_32BIT);
+
                                 const ctex = sdl.SDL_GPUTextureSamplerBinding{
                                     .texture = chunk.texture,
                                     .sampler = rr.ui_sampler,
                                 };
                                 sdl.SDL_BindGPUFragmentSamplers(pass, 0, &ctex, 1);
-                                sdl.SDL_DrawGPUIndexedPrimitives(pass, chunk.index_count, 1, 0, 0, 0);
+                                sdl.SDL_DrawGPUIndexedPrimitives(pass, 6, chunk.instance_count, 0, 0, 0);
                             }
                         }
                     }
@@ -547,8 +528,8 @@ pub const RenderSystem = struct {
         }
     }
 
-    fn uploadUIVertices(device: *sdl.SDL_GPUDevice, vertices: []const UIVertex) !*sdl.SDL_GPUBuffer {
-        const buffer_size: u32 = @intCast(@sizeOf(UIVertex) * vertices.len);
+    fn uploadInstances(device: *sdl.SDL_GPUDevice, instances: []const UIInstance) !*sdl.SDL_GPUBuffer {
+        const buffer_size: u32 = @intCast(@sizeOf(UIInstance) * instances.len);
 
         const transfer_info = sdl.SDL_GPUTransferBufferCreateInfo{
             .size = buffer_size,
@@ -561,8 +542,8 @@ pub const RenderSystem = struct {
 
         const data = sdl.SDL_MapGPUTransferBuffer(device, transfer_buf, false) orelse return error.MapFailed;
 
-        const vertices_bytes: []const u8 = std.mem.sliceAsBytes(vertices);
-        @memcpy(@as([*]u8, @ptrCast(data))[0..buffer_size], vertices_bytes);
+        const instances_bytes: []const u8 = std.mem.sliceAsBytes(instances);
+        @memcpy(@as([*]u8, @ptrCast(data))[0..buffer_size], instances_bytes);
         sdl.SDL_UnmapGPUTransferBuffer(device, transfer_buf);
 
         const buffer_info = sdl.SDL_GPUBufferCreateInfo{

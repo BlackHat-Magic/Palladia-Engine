@@ -20,12 +20,12 @@ pub fn createUIMaterial(
     format: sdl.SDL_GPUTextureFormat,
     args: UIMaterialArgs,
 ) !MaterialComponent {
-    const vertex_shader = try loadShaderFromBytes(
-        device,
-        ui_vert_spv,
-        sdl.SDL_GPU_SHADERSTAGE_VERTEX,
-        .{ .sampler_count = 0, .uniform_buffer_count = 0, .storage_buffer_count = 0 },
-    );
+        const vertex_shader = try loadShaderFromBytes(
+            device,
+            ui_vert_spv,
+            sdl.SDL_GPU_SHADERSTAGE_VERTEX,
+            .{ .sampler_count = 0, .uniform_buffer_count = 1, .storage_buffer_count = 0 },
+        );
     errdefer sdl.SDL_ReleaseGPUShader(device, vertex_shader);
 
     const fragment_shader = try loadShaderFromBytes(
@@ -59,26 +59,35 @@ pub fn createUIMaterial(
         .vertex_shader = vertex_shader,
         .fragment_shader = fragment_shader,
         .vertex_input_state = .{
-            .vertex_buffer_descriptions = &[_]sdl.SDL_GPUVertexBufferDescription{.{
-                .slot = 0,
-                .pitch = @sizeOf(UIVertex),
-                .input_rate = sdl.SDL_GPU_VERTEXINPUTRATE_VERTEX,
-                .instance_step_rate = 0,
-            }},
-            .num_vertex_buffers = 1,
-            .num_vertex_attributes = 11,
+            .vertex_buffer_descriptions = &[_]sdl.SDL_GPUVertexBufferDescription{
+                .{
+                    .slot = 0,
+                    .pitch = @sizeOf(UIVertex),
+                    .input_rate = sdl.SDL_GPU_VERTEXINPUTRATE_VERTEX,
+                    .instance_step_rate = 0,
+                },
+                .{
+                    .slot = 1,
+                    .pitch = @sizeOf(UIInstance),
+                    .input_rate = sdl.SDL_GPU_VERTEXINPUTRATE_INSTANCE,
+                    .instance_step_rate = 0,
+                },
+            },
+            .num_vertex_buffers = 2,
+            .num_vertex_attributes = 10,
             .vertex_attributes = &[_]sdl.SDL_GPUVertexAttribute{
-                .{ .location = 0, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIVertex, "position") },
-                .{ .location = 1, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIVertex, "res") },
-                .{ .location = 2, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4, .offset = @offsetOf(UIVertex, "color") },
-                .{ .location = 3, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIVertex, "uv") },
-                .{ .location = 4, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIVertex, "center") },
-                .{ .location = 5, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,  .offset = @offsetOf(UIVertex, "rot_cos") },
-                .{ .location = 6, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,  .offset = @offsetOf(UIVertex, "rot_sin") },
-                .{ .location = 7, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIVertex, "half_size") },
-                .{ .location = 8, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,  .offset = @offsetOf(UIVertex, "corner_radius") },
-                .{ .location = 9,  .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,  .offset = @offsetOf(UIVertex, "border_thickness") },
-                .{ .location = 10, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,  .offset = @offsetOf(UIVertex, "filled") },
+                // Per-vertex attributes (slot 0)
+                .{ .location = 0, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIVertex, "offset") },
+                .{ .location = 1, .buffer_slot = 0, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIVertex, "uv") },
+                // Per-instance attributes (slot 1)
+                .{ .location = 2, .buffer_slot = 1, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIInstance, "center") },
+                .{ .location = 3, .buffer_slot = 1, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = @offsetOf(UIInstance, "half_size") },
+                .{ .location = 4, .buffer_slot = 1, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,  .offset = @offsetOf(UIInstance, "rot_cos") },
+                .{ .location = 5, .buffer_slot = 1, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,  .offset = @offsetOf(UIInstance, "rot_sin") },
+                .{ .location = 6, .buffer_slot = 1, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4, .offset = @offsetOf(UIInstance, "color") },
+                .{ .location = 7, .buffer_slot = 1, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,  .offset = @offsetOf(UIInstance, "corner_radius") },
+                .{ .location = 8, .buffer_slot = 1, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,  .offset = @offsetOf(UIInstance, "border_thickness") },
+                .{ .location = 9, .buffer_slot = 1, .format = sdl.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,  .offset = @offsetOf(UIInstance, "filled") },
             },
         },
         .rasterizer_state = .{
@@ -107,20 +116,32 @@ pub fn createUIMaterial(
         .sampler = args.sampler,
         .vertex_shader = vertex_shader,
         .fragment_shader = fragment_shader,
-        .pipeline = pipeline.?,
-    };
+        .pipeline = pipeline.?,};
 }
 
+/// Static unit quad: offset in [-1,1], uv in [0,1]
 pub const UIVertex = extern struct {
-    position: [2]f32,
-    res: [2]f32,
-    color: [4]f32,
+    offset: [2]f32,
     uv: [2]f32,
+};
+
+/// Per-quad instance data
+pub const UIInstance = extern struct {
     center: [2]f32,
+    half_size: [2]f32,
     rot_cos: f32,
     rot_sin: f32,
-    half_size: [2]f32,
+    color: [4]f32,
     corner_radius: f32,
     border_thickness: f32,
     filled: f32,
 };
+
+pub const QUAD_VERTICES = [4]UIVertex{
+    .{ .offset = .{ -1.0, -1.0 }, .uv = .{ 0.0, 0.0 } },
+    .{ .offset = .{ 1.0, -1.0 }, .uv = .{ 1.0, 0.0 } },
+    .{ .offset = .{ -1.0, 1.0 }, .uv = .{ 0.0, 1.0 } },
+    .{ .offset = .{ 1.0, 1.0 }, .uv = .{ 1.0, 1.0 } },
+};
+
+pub const QUAD_INDICES = [6]u32{ 0, 1, 2, 2, 1, 3 };
