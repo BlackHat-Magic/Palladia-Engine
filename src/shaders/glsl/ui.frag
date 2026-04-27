@@ -8,7 +8,7 @@ layout(location = 4) in float vCornerRadius;
 layout(location = 5) in float vBorderThickness;
 layout(location = 6) in float vFilled;
 
-// TODO: figure out why this needs to be 2.
+// SDL expects fragment resources on 2
 layout(set = 2, binding = 0) uniform sampler2D uTex;
 
 layout(location = 0) out vec4 outColor;

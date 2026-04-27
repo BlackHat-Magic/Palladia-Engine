@@ -113,6 +113,7 @@ pub const RenderSystem = struct {
     }
 
     pub fn run(res: Res, world: anytype) void {
+        const has_draw_canvas = @hasField(@TypeOf(world.pools), "draw_canvas_pool");
         ensureSSBOs(res.device);
 
         if (point_dirty and point_ssbo != null) {
@@ -171,7 +172,7 @@ pub const RenderSystem = struct {
         };
 
         // Pre-warm text cache before render pass to avoid GPU work during the pass
-        if (@hasField(@TypeOf(world.pools), "draw_canvas_pool") and draw2d_renderer != null) {
+        if (has_draw_canvas and draw2d_renderer != null) {
             if (res.font_registry) |font_reg| {
                 var warm_iter = world.iter("draw_canvas");
                 while (warm_iter.next()) |entry| {
@@ -300,7 +301,7 @@ pub const RenderSystem = struct {
             }
         }
 
-        if (@hasField(@TypeOf(world.pools), "draw_canvas_pool") and draw2d_renderer != null and ui_pipeline != null) {
+        if (has_draw_canvas and draw2d_renderer != null and ui_pipeline != null) {
             if (res.texture_registry) |tex_reg| {
                 if (res.font_registry) |font_reg| {
                     var rr = &draw2d_renderer.?;
@@ -345,7 +346,7 @@ pub const RenderSystem = struct {
 
                                 const cache_gop = rr.canvas_cache.getOrPut(@intCast(ce.entity)) catch continue;
                                 if (!cache_gop.found_existing) {
-                                    cache_gop.value_ptr.* = Draw2DRenderer.CanvasCache.init(rr.allocator);
+                                    cache_gop.value_ptr.* = Draw2DRenderer.CanvasCache.init(rr.allocator) catch continue;
                                 }
                                 const cache = cache_gop.value_ptr;
 

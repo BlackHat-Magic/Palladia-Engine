@@ -110,11 +110,11 @@ pub fn build(comptime root_plugin: type) type {
             resources.set("active_camera", &active_camera);
 
             const tex_registry = allocator.create(registry_mod.TextureRegistry) catch @panic("OOM creating texture_registry");
-            tex_registry.* = .{};
+            tex_registry.* = registry_mod.TextureRegistry.init(allocator) catch @panic("OOM initializing texture_registry");
             resources.set("texture_registry", tex_registry);
 
             const font_registry = allocator.create(registry_mod.FontRegistry) catch @panic("OOM creating font_registry");
-            font_registry.* = .{};
+            font_registry.* = registry_mod.FontRegistry.init(allocator) catch @panic("OOM initializing font_registry");
             resources.set("font_registry", font_registry);
 
             const Ctx = Context(Components, ResourceDefs);

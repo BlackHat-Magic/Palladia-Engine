@@ -33,12 +33,12 @@ pub const TextCache = struct {
 
     const MAX_ENTRIES = 256;
 
-    pub fn init(allocator: std.mem.Allocator) TextCache {
+    pub fn init(allocator: std.mem.Allocator) !TextCache {
         return .{
-            .entries = std.ArrayList(TextCacheEntry).initCapacity(allocator, MAX_ENTRIES) catch @panic("OOM"),
-            .keys = std.ArrayList(TextCacheKey).initCapacity(allocator, MAX_ENTRIES) catch @panic("OOM"),
-            .access_counters = std.ArrayList(u64).initCapacity(allocator, MAX_ENTRIES) catch @panic("OOM"),
-            .pending = std.ArrayList(PendingUpload).initCapacity(allocator, 64) catch @panic("OOM"),
+            .entries = try std.ArrayList(TextCacheEntry).initCapacity(allocator, MAX_ENTRIES),
+            .keys = try std.ArrayList(TextCacheKey).initCapacity(allocator, MAX_ENTRIES),
+            .access_counters = try std.ArrayList(u64).initCapacity(allocator, MAX_ENTRIES),
+            .pending = try std.ArrayList(PendingUpload).initCapacity(allocator, 64),
             .allocator = allocator,
         };
     }
@@ -265,9 +265,9 @@ pub const Draw2DRenderer = struct {
         chunks: std.ArrayList(CommandChunk),
         allocator: std.mem.Allocator,
 
-        pub fn init(allocator: std.mem.Allocator) CanvasCache {
+        pub fn init(allocator: std.mem.Allocator) !CanvasCache {
             return .{
-                .chunks = std.ArrayList(CommandChunk).initCapacity(allocator, 16) catch @panic("OOM"),
+                .chunks = try std.ArrayList(CommandChunk).initCapacity(allocator, 16),
                 .allocator = allocator,
             };
         }
@@ -303,7 +303,7 @@ pub const Draw2DRenderer = struct {
             .quad_vertex_buffer = quad_vb,
             .quad_index_buffer = quad_ib,
             .canvas_cache = std.AutoHashMap(u32, CanvasCache).init(allocator),
-            .text_cache = TextCache.init(allocator),
+            .text_cache = try TextCache.init(allocator),
             .allocator = allocator,
         };
     }

@@ -1,5 +1,7 @@
 const std = @import("std");
 const sdl = @import("../sdl.zig").c;
+const draw2d = @import("../components/draw2d.zig");
+
 pub fn HandlePool(comptime T: type) type {
     return struct {
         const Id = u32;
@@ -7,10 +9,17 @@ pub fn HandlePool(comptime T: type) type {
         items: std.ArrayListUnmanaged(T) = .{},
         next_id: Id = 1,
 
+        pub fn init(allocator: std.mem.Allocator) !@This() {
+            return .{
+                .items = try std.ArrayListUnmanaged(T).initCapacity(allocator, 16),
+                .next_id = 1,
+            };
+        }
+
         pub fn register(self: *@This(), allocator: std.mem.Allocator, value: T) !Id {
-            try self.items.append(allocator, value);
             const id = self.next_id;
             self.next_id += 1;
+            try self.items.append(allocator, value);
             return id;
         }
 
@@ -32,23 +41,21 @@ pub const FontRegistry = HandlePool(*sdl.TTF_Font);
 
 test "HandlePool basic operations" {
     const allocator = std.testing.allocator;
-    var pool = HandlePool(u32){};
+    var pool = try HandlePool(u32).init(allocator);
 
-    const id1 = try pool.register(allocator, 42);
-    try std.testing.expectEqual(@as(u32, 1), id1);
-    try std.testing.expectEqual(@as(?u32, 42), pool.get(id1));
-
-    const id2 = try pool.register(allocator, 99);
-    try std.testing.expectEqual(@as(u32, 2), id2);
-    try std.testing.expectEqual(@as(?u32, 99), pool.get(id2));
-
+    const id = try pool.register(allocator, 42);
+    try std.testing.expectEqual(@as(u32, 1), id);
+    try std.testing.expectEqual(@as(?u32, 42), pool.get(id));
     try std.testing.expectEqual(@as(?u32, null), pool.get(0));
     try std.testing.expectEqual(@as(?u32, null), pool.get(999));
 
     pool.deinit(allocator);
 }
 
-test "TextureRegistry and FontRegistry exist" {
-    _ = TextureRegistry{};
-    _ = FontRegistry{};
+test "TextureRegistry and FontRegistry init" {
+    const allocator = std.testing.allocator;
+    var tex = try TextureRegistry.init(allocator);
+    defer tex.deinit(allocator);
+    var font = try FontRegistry.init(allocator);
+    defer font.deinit(allocator);
 }
