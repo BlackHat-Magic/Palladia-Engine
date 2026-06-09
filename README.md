@@ -4,13 +4,17 @@
 
 (Formerly Asmadi)
 
-A Simple, ECS-based game engine written in C using SDL3's GPU API
+A Simple, ECS-based game engine written in Zig using SDL3's GPU API
 
 </div>
 
 ## Overview
 
-The Asmadi Palladia Engine is a game engine using SDL3's GPU API to create 3D accelerated graphical applications with Vulkan (and soon hopefully WebGPU). I might add Metal support if I feel like it.
+The Palladia Engine is a game engine using SDL3's GPU API to create 3D accelerated graphical applications with Vulkan (and soon hopefully WebGPU). I might add Metal support if I feel like it.
+
+> Note: Work on Palladia (namely the [Zig rewrite](https://github.com/BlackHat-Magic/Palladia-Engine/tree/rewrite/zig)) is paused to replace the existing MicroUI integration with [Slayer](https://github.com/BlackHat-Magic/Slayer), a flexible custom UI library. The Python prototype needs to be replaced with a Zig implementation.
+>
+> [Piru](https://github.com/BlackHat-Magic/Piru) may end up being the engine's scripting language (thoughit is not a blocker and will have to wait much longer).
 
 ### Goals
 
